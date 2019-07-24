@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+<title>Grapheme Test</title>
+<style>
+* {
+  margin: 0;
+}
+body {
+  height: 100%;
+}
+</style>
+</head>
+
+  <body>
+    <canvas id="#main_canvas" width="100%" height="100%"></canvas>
+  </body>
+
+  <script src="../build/grapheme.js"></script>
+  <script>
+    const context = new Grapheme.InteractiveContext(document.getElementById("#main_canvas"));
+
+    const resizeCanvas = (evt) => {
+      context.width = window.innerWidth;
+      context.height = window.innerHeight;
+    };
+
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('load', resizeCanvas);
+
+    window.addEventListener('load', (evt) => {
+      let gridlines = new Grapheme.AutoGridlines(context);
+
+      context.addElement(gridlines);
+
+      let function_c = new Grapheme.FunctionalGraph(context);
+
+      context.addElement(function_c);
+      context.interactivityEnabled = true;
+
+      animate();
+    });
+
+    function animate() {
+      context.viewport.height = context.viewport.width * context.height / context.width;
+      context.drawFrame();
+
+      requestAnimationFrame(animate);
+    }
+  </script>
+</html>
