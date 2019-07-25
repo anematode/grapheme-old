@@ -94,21 +94,181 @@ class Context {
   }
 
   canvasToCartesian(x,y) {
-    return [(x / this.width - 0.5) * this.viewport.width + this.viewport.x,
-      -(y / this.height - 0.5) * this.viewport.height + this.viewport.y];
+    return {x: (x / this.width - 0.5) * this.viewport.width + this.viewport.x,
+      y: -(y / this.height - 0.5) * this.viewport.height + this.viewport.y};
+  }
+
+  canvasToCartesianFloatArray(arr) {
+    let w = this.width, vw = this.viewport.width, vx = this.viewport.x;
+    let h = this.height, vh = this.viewport.height, vy = this.viewport.y;
+
+    for (let i = 0; i < arr.length; i += 2) {
+      arr[i] = (arr[i] / w - 0.5) * vw + vx;
+      arr[i+1] = -(arr[i+1] / h - 0.5) * vh + vy;
+    }
+
+    return arr;
   }
 
   cartesianToCanvas(x,y) {
-    return [this.width * ((x - this.viewport.x) / this.viewport.width + 0.5),
-      this.height * (-(y - this.viewport.y) / this.viewport.height + 0.5)];
+    return {x: this.width * ((x - this.viewport.x) / this.viewport.width + 0.5),
+      y: this.height * (-(y - this.viewport.y) / this.viewport.height + 0.5)};
+  }
+
+  cartesianToCanvasFloatArray(arr) {
+    let w = this.width, vw = this.viewport.width, vx = this.viewport.x;
+    let h = this.height, vh = this.viewport.height, vy = this.viewport.y;
+
+    for (let i = 0; i < arr.length; i += 2) {
+      arr[i] = w * ((arr[i] - vx) / vw + 0.5);
+      arr[i+1] = h * (-(arr[i+1] - vy) / vh + 0.5);
+    }
+
+    return arr;
+  }
+
+  canvasToCartesianX(x) {
+    return (x / this.width - 0.5) * this.viewport.width + this.viewport.x;
+  }
+
+  canvasToCartesianXFloatArray(arr) {
+    let w = this.width, vw = this.viewport.width, vx = this.viewport.x;
+
+    for (let i = 0; i < arr.length; ++i) {
+      arr[i] = (arr[i] / w - 0.5) * vw + vx;
+    }
+
+    return arr;
+  }
+
+  cartesianToCanvasX(x) {
+    return this.width * ((x - this.viewport.x) / this.viewport.width + 0.5);
+  }
+
+  cartesianToCanvasXFloatArray(arr) {
+    let w = this.width, vw = this.viewport.width, vx = this.viewport.x;
+
+    for (let i = 0; i < arr.length; ++i) {
+      arr[i] = w * ((arr[i] - vx) / vw + 0.5);
+    }
+
+    return arr;
+  }
+
+  canvasToCartesianY(y) {
+    return -(y / this.height - 0.5) * this.viewport.height + this.viewport.y;
+  }
+
+  canvasToCartesianYFloatArray(arr) {
+    let h = this.height, vh = this.viewport.height, vy = this.viewport.y;
+
+    for (let i = 0; i < arr.length; ++i) {
+      arr[i] = -(arr[i] / h - 0.5) * vh + vy;
+    }
+
+    return arr;
+  }
+
+  cartesianToCanvasY(y) {
+    return this.height * (-(y - this.viewport.y) / this.viewport.height + 0.5);
+  }
+
+  cartesianToCartesianYFloatArray(arr) {
+    let h = this.height, vh = this.viewport.height, vy = this.viewport.y;
+
+    for (let i = 0; i < arr.length; ++i) {
+      arr[i] = h * (-(arr[i] - vy) / vh + 0.5);
+    }
+
+    return arr;
   }
 
   cartesianToCanvasV(x,y) {
-    return [this.width * x / this.viewport.width, -this.height * y / this.viewport.height];
+    return {x: this.width * x / this.viewport.width, y: -this.height * y / this.viewport.height};
+  }
+
+  cartesianToCanvasVFloatArray(arr) {
+    let wr = this.width / this.viewport.width;
+    let hr = -this.height / this.viewport.height;
+
+    for (let i = 0; i < arr.length; i += 2) {
+      arr[i] = wr * arr[i];
+      arr[i+1] = hr * arr[i+1];
+    }
+
+    return arr;
   }
 
   canvasToCartesianV(x,y) {
-    return [this.viewport.width * x / this.width, -this.viewport.height * y / this.height];
+    return {x: this.viewport.width * x / this.width, y: -this.viewport.height * y / this.height};
+  }
+
+  canvasToCartesianVFloatArray(arr) {
+    let wrp = this.viewport.width / this.width;
+    let hrp = -this.viewport.height / this.height;
+
+    for (let i = 0; i < arr.length; i += 2) {
+      arr[i] = wrp * arr[i];
+      arr[i+1] = hrp * arr[i+1];
+    }
+
+    return arr;
+  }
+
+  cartesianToCanvasVX(x) {
+    return this.width * x / this.viewport.width;
+  }
+
+  cartesianToCanvasVXFloatArray(arr) {
+    let wr = this.width / this.viewport.width;
+
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] = wr * arr[i];
+    }
+
+    return arr;
+  }
+
+  cartesianToCanvasVY(y) {
+    return -this.height * y / this.viewport.height;
+  }
+
+  cartesianToCanvasVYFloatArray(y) {
+    let hr = -this.height / this.viewport.height;
+
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] = hr * arr[i];
+    }
+
+    return arr;
+  }
+
+  canvasToCartesianVX(x) {
+    return this.viewport.width * x / this.width;
+  }
+
+  canvasToCartesianVXFloatArray(arr) {
+    let wrp = this.viewport.width / this.width;
+
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] = wrp * arr[i];
+    }
+
+    return arr;
+  }
+
+  canvasToCartesianVY(y) {
+    return -this.viewport.height * y / this.height;
+  }
+
+  canvasToCartesianVYFloatArray(arr) {
+    let hrp = -this.viewport.height / this.height;
+
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] = hrp * arr[i];
+    }
+
+    return arr;
   }
 
   minX() {
@@ -133,20 +293,6 @@ class Context {
 
   cartesianYInView(y) {
     return Math.abs(y - this.viewport.y) <= this.viewport.height / 2;
-  }
-
-  transformCartesianCoordinatesFloatArray(xy) {
-    // Takes in Float32Arrays and Float64Arrays
-
-    let cw = this.width;
-    let ch = this.height;
-
-    let vx = this.viewport.x;
-    let vy = this.viewport.y;
-    let vw = this.viewport.width;
-    let vh = this.viewport.height;
-
-
   }
 }
 
