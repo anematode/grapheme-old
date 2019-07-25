@@ -42,4 +42,63 @@ function roundToCanvasCoord(c) {
   return Math.round(c-0.5)+0.5;
 }
 
-export { select, getID, assert, checkType, deepEquals, roundToCanvasCoord };
+function _ctxDrawPath(ctx, arr) {
+  ctx.beginPath();
+
+  for (let i = 2; i < arr.length; i += 2) {
+    ctx.lineTo(arr[i], arr[i+1]);
+  }
+
+  ctx.stroke();
+}
+
+function isInteger(z) {
+  return Number.isInteger(z); // didn't know about this lol
+}
+
+function isNonnegativeInteger(z) {
+  return Number.isInteger(z) && z >= 0;
+}
+
+function isPositiveInteger(z) {
+  return Number.isInteger(z) && z > 0;
+}
+
+function isNonpositiveInteger(z) {
+  return Number.isInteger(z) && z <= 0;
+}
+
+function isNegativeInteger(z) {
+  return Number.isInteger(z) && z < 0;
+}
+
+// https://stackoverflow.com/a/34749873
+function isObject(item) {
+  return (item && typeof item === 'object' && !Array.isArray(item));
+}
+
+// https://stackoverflow.com/a/34749873
+function mergeDeep(target, ...sources) {
+  if (!sources.length) return target;
+  const source = sources.shift();
+
+  if (isObject(target) && isObject(source)) {
+    for (const key in source) {
+      if (isObject(source[key])) {
+        if (!target[key]) Object.assign(target, { [key]: {} });
+        mergeDeep(target[key], source[key]);
+      } else {
+        Object.assign(target, { [key]: source[key] });
+      }
+    }
+  }
+
+  return mergeDeep(target, ...sources);
+}
+
+function isApproxEqual(v, w, eps=1e-5) {
+  return Math.abs(v - w) < eps;
+};
+
+export { select, getID, assert, checkType, deepEquals, roundToCanvasCoord, _ctxDrawPath, isInteger, isNonnegativeInteger,
+isNonpositiveInteger, isNegativeInteger, isPositiveInteger, mergeDeep, isApproxEqual };
