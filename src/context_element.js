@@ -6,6 +6,7 @@ class ContextElement {
 
     this.precedence = utils.select(params.precedence, 1);
     this.id = utils.getID();
+    this.display = utils.select(params.display, true);
   }
 
   draw(canvas, canvas_ctx, info) {
