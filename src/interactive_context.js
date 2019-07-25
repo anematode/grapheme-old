@@ -22,10 +22,29 @@ class InteractiveContext extends Context {
   }
 
   _addMouseEvtListeners() {
-    this.canvas.addEventListener("mousedown", evt => this._mouseDown(evt));
-    this.canvas.addEventListener("mouseup", evt => this._mouseUp(evt));
-    this.canvas.addEventListener("mousemove", evt => this._mouseMove(evt));
-    this.canvas.addEventListener("wheel", evt => this._onScroll(evt));
+    utils.assert(!this._listenersAdded, "listeners already added!");
+    this._listenersAdded = true;
+
+    this.listeners = {
+      "mousedown": evt => this._mouseDown(evt),
+      "mouseup": evt => this._mouseUp(evt),
+      "mousemove": evt => this._mouseMove(evt),
+      "wheel": evt => this._onScroll(evt)
+    };
+
+    for (let key in this.listeners) {
+      this.canvas.addEventListener(key, this.listeners[key]);
+    }
+  }
+
+  _removeMouseEvtListeners() {
+    this._listenersAdded = false;
+
+    for (let key in this.listeners) {
+      this.canvas.removeEventListener(key, this.listeners[key]);
+      delete this.listeners[key];
+    }
+
   }
 
   _mouseDown(evt) {
@@ -54,8 +73,8 @@ class InteractiveContext extends Context {
     let coords = getMouseOnCanvas(this.canvas, evt);
     let cartesian_coords = this.canvasToCartesian(coords.x, coords.y);
 
-    this.viewport.x -= cartesian_coords[0] - this._mouse_down_coordinates[0];
-    this.viewport.y -= cartesian_coords[1] - this._mouse_down_coordinates[1];
+    this.viewport.x -= cartesian_coords.x - this._mouse_down_coordinates.x;
+    this.viewport.y -= cartesian_coords.y - this._mouse_down_coordinates.y;
   }
 
   _onScroll(evt) {
@@ -72,8 +91,8 @@ class InteractiveContext extends Context {
 
     let new_cartesian_coords = this.canvasToCartesian(coords.x, coords.y);
 
-    this.viewport.x += cartesian_coords[0] - new_cartesian_coords[0];
-    this.viewport.y += cartesian_coords[1] - new_cartesian_coords[1];
+    this.viewport.x += cartesian_coords.x - new_cartesian_coords.x;
+    this.viewport.y += cartesian_coords.y - new_cartesian_coords.y;
   }
 }
 
