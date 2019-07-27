@@ -135,7 +135,7 @@ class GraphemeContext {
     this.height = this.canvas.height = this.text_canvas.height = devicePixelRatio * boundingRect.height;
 
     // set the GL viewport to the whole canvas
-    this.gl.viewport(0, 0, this.cWidth, this.cHeight);
+    this.gl.viewport(0, 0, this.width, this.height);
   }
 
   clearCanvas(color=this.clear_color) {
