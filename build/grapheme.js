@@ -101,6 +101,60 @@ var Grapheme = (function (exports) {
   function isApproxEqual(v, w, eps=1e-5) {
     return Math.abs(v - w) < eps;
   }
+  // This function takes in a GL rendering context, a type of shader (fragment/vertex),
+  // and the GLSL source code for that shader, then returns the compiled shader
+  function createShaderFromSource(gl, shaderType, shaderSourceText) {
+    // create an (empty) shader of the provided type
+    let shader = gl.createShader(shaderType);
+
+    // set the source of the shader to the provided source
+    gl.shaderSource(shader, shaderSourceText);
+
+    // compile the shader!! piquant
+    gl.compileShader(shader);
+
+    // get whether the shader compiled properly
+    let succeeded = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+
+    if (succeeded)
+      return shader; // return it if it compiled properly
+    else {
+      // throw an error with the details of why the compilation failed
+      throw new Error(gl.getShaderInfoLog(shader));
+
+      // delete the shader to free it from memory
+      gl.deleteShader(shader);
+    }
+  }
+
+  // This function takes in a GL rendering context, the fragment shader, and the vertex shader,
+  // and returns a compiled program.
+  function createGLProgram(gl, vertShader, fragShader) {
+    // create an (empty) GL program
+    let program = gl.createProgram();
+
+    // link the vertex shader
+    gl.attachShader(program, vertShader);
+
+    // link the fragment shader
+    gl.attachShader(program, fragShader);
+
+    // compile the program
+    gl.linkProgram(program);
+
+    // get whether the program compiled properly
+    let succeeded = gl.getProgramParameter(program, gl.LINK_STATUS);
+
+    if (succeeded)
+      return program;
+    else {
+      // throw an error with the details of why the compilation failed
+      throw new Error(gl.getProgramInfoLog(program));
+
+      // delete the program to free it from memory
+      gl.deleteProgram(program);
+    }
+  }
 
   var utils = /*#__PURE__*/Object.freeze({
     select: select,
@@ -116,7 +170,9 @@ var Grapheme = (function (exports) {
     isNegativeInteger: isNegativeInteger,
     isPositiveInteger: isPositiveInteger,
     mergeDeep: mergeDeep,
-    isApproxEqual: isApproxEqual
+    isApproxEqual: isApproxEqual,
+    createShaderFromSource: createShaderFromSource,
+    createGLProgram: createGLProgram
   });
 
   let alignment_types = ["N", "NW", "NE", "S", "SW", "SE", "E", "W"];
@@ -302,7 +358,7 @@ var Grapheme = (function (exports) {
       this.viewport = {x: 0, y: 0, width: 1, height: 1};
 
       // 0 <= r,g,b <= 255, 0 <= a <= 1 please!
-      this.clear_color = {r: 255, g: 100, b: 255, a: 0.5};
+      this.clear_color = {r: 5, g: 5, b: 5, a: 0.95};
 
       this._addResizeEventListeners();
     }
@@ -618,14 +674,14 @@ var Grapheme = (function (exports) {
     }
 
     cartesianToGLY(y) {
-      return -2 * (y - this.viewport.y) / this.viewport.height;
+      return 2 * (y - this.viewport.y) / this.viewport.height;
     }
 
     cartesianToGLYFloatArray(arr) {
       let div_vh = 2 / this.viewport.height, vy = this.viewport.y;
 
       for (let i = 0; i < arr.length; ++i) {
-        arr[i] = -(vy - arr[i]) * div_vh;
+        arr[i] = (vy - arr[i]) * div_vh;
       }
 
       return arr;
@@ -646,17 +702,33 @@ var Grapheme = (function (exports) {
     }
 
     cartesianToGLVY(y) {
-      return -2 * y / this.viewport.height;
+      return 2 * y / this.viewport.height;
     }
 
     cartesianToGLVYFloatArray(y) {
-      let hr = -2 / this.viewport.height;
+      let hr = 2 / this.viewport.height;
 
       for (let i = 0; i < arr.length; i++) {
         arr[i] = hr * arr[i];
       }
 
       return arr;
+    }
+
+    GLVXToCartesian(x) {
+      return this.viewport.width * x / 2;
+    }
+
+    GLVYToCartesian(y) {
+      return -this.viewport.height * y / 2;
+    }
+
+    pixelToGLVX(x) {
+      return 2 * x / this.width;
+    }
+
+    pixelToGLVY(y) {
+      return 2 * y / this.height;
     }
 
     minX() {
@@ -775,27 +847,187 @@ var Grapheme = (function (exports) {
     }
   }
 
+  const vertexShaderSource = `
+// set the float precision of the shader to medium precision
+precision mediump float;
+// a vector containing the 2D position of the vertex
+attribute vec2 v_position;
+
+void main() {
+  // set the vertex's resultant position
+  gl_Position = vec4(v_position, 0, 1);
+}`;
+
+  const fragmentShaderSource = `
+// set the float precision of the shader to medium precision
+precision mediump float;
+// vec4 containing the color of the line to be drawn
+uniform vec4 line_color;
+
+void main() {
+  gl_FragColor = line_color;
+}
+`;
+
   class Gridlines extends ContextElement {
     constructor(context, params={}) {
       super(context, params);
 
       this.orientation = select(params.orientation);
 
-      // gridlines is an array of coordinates (in coordinate space), whether it's
-      // x axis or y axis, and the line thickness and color (default is #000000),
+      // gridlines is a dictionary of coordinates (in coordinate space), whether it's
+      // x axis or y axis, and the line thickness,
       // label text (if desired), lpos ('l','r')
-      this.gridlines = [];
-
+      // the key is the line color
       // example gridline:
-      // {dir: 'x', pos: 0.8, pen: 0.5, color: "#000000", label: "0.8", lpos: 'l'', font: "15px Helvetica"}
+      // {dir: 'x', pos: 0.8, pen: 0.5, label: "0.8", lpos: 'l'', font: "15px Helvetica"}
+      // example overall structure: "{r: 255, g: 100, b: 30, a: 0.5} : [], {...} : []"
+      this.gridlines = {};
+
+      // maximum number of gridlines that can be RENDERED
+      this.max_render_gridlines = params.max_gridlines || 1000;
+      // float 32 array of gridline vertices (as triangles)
+      this.gridline_vertices = new Float32Array(this.max_render_gridlines * 12);
+      // GL buffer containing our vertices (later)
+      this.vertex_position_buf = this.context.gl.createBuffer();
+    }
+
+    _getGridlinesShaderProgram() {
+      if (this.context._gridlinesShader)
+        return this.context._gridlinesShader;
+
+      let gl = this.context.gl;
+
+      // create the vertex shader.
+      let vertShad = createShaderFromSource(gl /* rendering context */,
+        gl.VERTEX_SHADER /* enum for vertex shader type */,
+        vertexShaderSource /* source of the vertex shader*/ );
+
+      // create the frag shader.
+      let fragShad = createShaderFromSource(gl /* rendering context */,
+        gl.FRAGMENT_SHADER /* enum for vertex shader type */,
+        fragmentShaderSource /* source of the vertex shader*/ );
+
+      // create the program
+      let program = this.context._gridlinesShader = createGLProgram(gl, vertShad, fragShad);
+
+      // get the location of the vec4 in the program to set the color
+      this.context._gridlinesShaderColorLoc = gl.getUniformLocation(program, "line_color");
+
+      // get the location of the vertex array in the program
+      this.context._gridlinesShaderVertexLocation = gl.getAttribLocation(program, "v_position");
+
+      return program;
+    }
+
+    _gridlinesShaderColorLoc() {
+      return this.context._gridlinesShaderColorLoc;
+    }
+
+    _gridlinesShaderVertexLocation() {
+      return this.context._gridlinesShaderVertexLocation;
+    }
+
+    drawLines() {
+      let gl = this.context.gl;
+
+      let gridlines = this.gridlines;
+
+      let colors = Object.keys(this.gridlines);
+      let vertices = this.gridline_vertices;
+
+      let glProgram = this._getGridlinesShaderProgram();
+      let colorLocation = this._gridlinesShaderColorLoc();
+      let verticesLocation = this._gridlinesShaderVertexLocation();
+
+      // tell webgl to start using the gridline program
+      gl.useProgram(glProgram);
+
+      // bind our webgl buffer to gl.ARRAY_BUFFER access point
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.vertex_position_buf);
+
+      let m,y1,y2,x1,x2,delta;
+      let width = this.context.width, height = this.context.height;
+
+      // for each color...
+      for (let color_i = 0; color_i < colors.length; ++color_i) {
+        let color = colors[color_i];
+        let gridl_subset = this.gridlines[colors[color_i]];
+        let vertex_i = -1;
+
+        // ... fill up the vertices float32array with triangles corresponding to those lines
+        for (let i = 0; i < gridl_subset.length; ++i) {
+          let gridline = gridl_subset[i];
+          let thickness_d = gridline.pen / 2;
+
+
+          switch (gridline.dir) {
+            case 'x':
+              m = this.context.cartesianToGLX(gridline.pos);
+              delta = this.context.pixelToGLVX(thickness_d);
+              x1 = m - delta;
+              x2 = m + delta;
+              y1 = -1, y2 = 1; // set y1 and y2 to the bounds of clip space
+
+              break;
+            case 'y':
+              m = this.context.cartesianToGLY(gridline.pos);
+              delta = -this.context.pixelToGLVY(thickness_d);
+              y1 = m - delta;
+              y2 = m + delta;
+              x1 = -1, x2 = 1;
+
+              break;
+          }
+
+          // Make a rectangle for each line
+          // Triangle 1
+          vertices[++vertex_i] = x1;
+          vertices[++vertex_i] = y1;
+          vertices[++vertex_i] = x1;
+          vertices[++vertex_i] = y2;
+          vertices[++vertex_i] = x2;
+          vertices[++vertex_i] = y2;
+
+          // console.log(x1,y1,x1,y2,x2,y2)
+
+          // Triangle 2
+          vertices[++vertex_i] = x1;
+          vertices[++vertex_i] = y1;
+          vertices[++vertex_i] = x2;
+          vertices[++vertex_i] = y1;
+          vertices[++vertex_i] = x2;
+          vertices[++vertex_i] = y2;
+        }
+
+        // set the vec4 at colorLocation to (r, g, b, a)
+        gl.uniform4f(colorLocation,
+          ((color >> 24) & 0xff) / 255, // bit masks to retrieve r, g, b and a
+          ((color >> 16) & 0xff) / 255, // divided by 255 because webgl likes [0.0, 1.0]
+          ((color >> 8) & 0xff) / 255,
+          (color & 0xff) / 255);
+
+        // copy our vertex data to the GPU
+        gl.bufferData(gl.ARRAY_BUFFER, this.gridline_vertices, gl.DYNAMIC_DRAW /* means we will rewrite the data often */);
+
+        // enable the vertices location attribute to be used in the program
+        gl.enableVertexAttribArray(verticesLocation);
+
+        // tell it that the width of vertices is 2 (since it's x,y), that it's floats,
+        // that it shouldn't normalize floats, and something i don't understand
+        gl.vertexAttribPointer(verticesLocation, 2, gl.FLOAT, false, 0, 0);
+
+        // draw the vertices as triple-wise triangles
+        gl.drawArrays(gl.TRIANGLES, 0, (vertex_i + 1) / 2);
+      }
     }
 
     draw(info) {
       super.draw(info);
+      this.drawLines();
+
       let ctx = this.context.text_canvas_ctx;
 
-      let currentThickness = 0;
-      let currentColor = "";
       let currentFont = "";
       let currentTextBaseline = "";
       let currentTextAlignment = "";
@@ -810,108 +1042,105 @@ var Grapheme = (function (exports) {
       let minX = this.context.minX();
 
       let labelX, labelY;
+      let colors = Object.keys(this.gridlines);
 
-      for (let i = 0; i < this.gridlines.length; ++i) {
-        let gridline = this.gridlines[i];
+      for (let color_i = 0; color_i < colors.length; ++color_i) {
+        let arr = this.gridlines[colors[color_i]];
 
-        if (gridline.pen != currentThickness) {
-          currentThickness = ctx.lineWidth = gridline.pen;
-        }
+        for (let i = 0; i < arr.length; ++i) {
+          let gridline = arr[i];
 
-        if (gridline.color != currentColor) {
-          currentColor = ctx.strokeStyle = gridline.color;
-        }
+          if (gridline.font && gridline.font != currentFont) {
+            currentFont = ctx.font = gridline.font;
+          }
 
-        if (gridline.font && gridline.font != currentFont) {
-          currentFont = ctx.font = gridline.font;
-        }
+          if (gridline.lcol && gridline.lcol != currentFontColor) {
+            currentFontColor = ctx.fillStyle = gridline.lcol;
+          }
 
-        if (gridline.lcol && gridline.lcol != currentFontColor) {
-          currentFontColor = ctx.fillStyle = gridline.lcol;
-        }
+          let textBaseline = gridline.bl || "bottom", textAlign = gridline.ta || "left";
 
-        let textBaseline = gridline.bl || "bottom", textAlign = gridline.ta || "left";
+          switch (gridline.dir) {
+            case 'x':
+              let canv_x_coord = this.context.cartesianToPixelX(gridline.pos);
 
-        switch (gridline.dir) {
-          case 'x':
-            let canv_x_coord = this.context.cartesianToPixelX(gridline.pos);
+              if (gridline.label) { // label the gridline
+                let y_draw_pos; // y position of the label
 
-            if (gridline.label) { // label the gridline
-              let y_draw_pos; // y position of the label
-
-              switch (gridline.lpos) { // label position
-                case "top":
-                  y_draw_pos = 0;
-                  textBaseline = "top";
-                  break;
-                case "bottom":
-                  y_draw_pos = this.context.height;
-                  textBaseline = "bottom";
-                  break;
-                case "axis":
-                  y_draw_pos = this.context.cartesianToPixelY(0);
-                  break;
-                case "dynamic":
-                  if (0 > maxY) { // put label at the top of the canvas
+                switch (gridline.lpos) { // label position
+                  case "top":
                     y_draw_pos = 0;
                     textBaseline = "top";
-                  } else if (0 < minY) { // put label at bottom of canvas
+                    break;
+                  case "bottom":
                     y_draw_pos = this.context.height;
                     textBaseline = "bottom";
-                  } else {
+                    break;
+                  case "axis":
                     y_draw_pos = this.context.cartesianToPixelY(0);
-                  }
+                    break;
+                  case "dynamic":
+                    if (0 > maxY) { // put label at the top of the canvas
+                      y_draw_pos = 0;
+                      textBaseline = "top";
+                    } else if (0 < minY) { // put label at bottom of canvas
+                      y_draw_pos = this.context.height;
+                      textBaseline = "bottom";
+                    } else {
+                      y_draw_pos = this.context.cartesianToPixelY(0);
+                    }
+                }
+
+                labelX = canv_x_coord, labelY = y_draw_pos;
               }
+              break;
+            case 'y':
+              let canv_y_coord = this.context.cartesianToPixelY(gridline.pos);
 
-              labelX = canv_x_coord, labelY = y_draw_pos;
-            }
-            break;
-          case 'y':
-            let canv_y_coord = this.context.cartesianToPixelY(gridline.pos);
+              if (gridline.label !== undefined) {
+                let x_draw_pos;
 
-            if (gridline.label !== undefined) {
-              let x_draw_pos;
-
-              switch (gridline.lpos) { // label position
-                case "left":
-                  x_draw_pos = 0;
-                  textAlign = "left";
-                  break;
-                case "right":
-                  x_draw_pos = this.context.width;
-                  textAlign = "right";
-                  break;
-                case "axis":
-                  x_draw_pos = this.context.cartesianToPixelX(0);
-                  break;
-                case "dynamic":
-                  if (0 > maxX) { // put label at the right of the canvas
-                    x_draw_pos = this.context.width;
-                    textAlign = "right";
-                  } else if (0 < minX) { // put label at left of canvas
+                switch (gridline.lpos) { // label position
+                  case "left":
                     x_draw_pos = 0;
                     textAlign = "left";
-                  } else {
+                    break;
+                  case "right":
+                    x_draw_pos = this.context.width;
+                    textAlign = "right";
+                    break;
+                  case "axis":
                     x_draw_pos = this.context.cartesianToPixelX(0);
-                  }
-              }
+                    break;
+                  case "dynamic":
+                    if (0 > maxX) { // put label at the right of the canvas
+                      x_draw_pos = this.context.width;
+                      textAlign = "right";
+                    } else if (0 < minX) { // put label at left of canvas
+                      x_draw_pos = 0;
+                      textAlign = "left";
+                    } else {
+                      x_draw_pos = this.context.cartesianToPixelX(0);
+                    }
+                }
 
-              labelX = x_draw_pos, labelY = canv_y_coord;
+                labelX = x_draw_pos, labelY = canv_y_coord;
 
-            break;
+              break;
+            }
           }
-        }
 
-        if (gridline.label) {
-          if (textBaseline != currentTextBaseline) {
-            currentTextBaseline = ctx.textBaseline = textBaseline;
+          if (gridline.label) {
+            if (textBaseline != currentTextBaseline) {
+              currentTextBaseline = ctx.textBaseline = textBaseline;
+            }
+
+            if (textAlign != currentTextAlignment) {
+              currentTextAlignment = ctx.textAlign = textAlign;
+            }
+
+            ctx.fillText(gridline.label, labelX, labelY);
           }
-
-          if (textAlign != currentTextAlignment) {
-            currentTextAlignment = ctx.textAlign = textAlign;
-          }
-
-          ctx.fillText(gridline.label, labelX, labelY);
         }
       }
     }
@@ -1007,20 +1236,22 @@ var Grapheme = (function (exports) {
     }
   };
 
+  const DEFAULT_COLOR = {r: 0, g: 0, b: 0, a: 1};
+
   class AutoGridlines extends Gridlines {
     constructor(context, params={}) {
       super(context, params);
 
       this.bold = mergeDeep({
         thickness: 1.3, // Thickness of the axes lines
-        color: "#000000", // Color of the axes lines
+        color: 0xffffffff, // Color of the axes lines
         display: true, // Whether to display the axis lines
         label_function: "default",
         labels: {
           x: {
             display: true,
             font: "bold 15px Helvetica",
-            color: "#000000",
+            color: "#fff",
             align: "SW", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
             location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
@@ -1028,7 +1259,7 @@ var Grapheme = (function (exports) {
           y: {
             display: true,
             font: "bold 15px Helvetica",
-            color: "#000000",
+            color: "#fff",
             align: "SW", // corner/side on which to align the y label
             location: "dynamic" // can be axis, left, right, or dynamic (switches between)
           }
@@ -1036,7 +1267,7 @@ var Grapheme = (function (exports) {
       }, params.bold);
       this.normal = mergeDeep({
         thickness: 0.5, // Thickness of the normal lines
-        color: "#222222", // Color of the normal lines
+        color: 0xaaaaaaff, // Color of the normal lines
         ideal_dist: 140, // ideal distance between lines in pixels
         display: true, // whether to display the lines
         label_function: "default",
@@ -1044,7 +1275,7 @@ var Grapheme = (function (exports) {
           x: {
             display: true,
             font: "14px Helvetica",
-            color: "#000000",
+            color: "#eee",
             align: "SE", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
             location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
@@ -1052,7 +1283,7 @@ var Grapheme = (function (exports) {
           y: {
             display: true,
             font: "14px Helvetica",
-            color: "#000000",
+            color: "#eee",
             align: "W", // corner/side on which to align the y label
             location: "dynamic"
           }
@@ -1060,7 +1291,7 @@ var Grapheme = (function (exports) {
       }, params.normal);
       this.thin = mergeDeep({
         thickness: 0.2, // Thickness of the finer demarcations
-        color: "#444444", // Color of the finer demarcations
+        color: 0x999999ff, // Color of the finer demarcations
         ideal_dist: 50, // ideal distance between lines in pixels
         display: true, // whether to display them
         label_function: "default",
@@ -1068,7 +1299,7 @@ var Grapheme = (function (exports) {
           x: {
             display: false,
             font: "10px Helvetica",
-            color: "#333333",
+            color: "#bbb",
             align: "S", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
             location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
@@ -1076,7 +1307,7 @@ var Grapheme = (function (exports) {
           y: {
             display: true,
             font: "8px Helvetica",
-            color: "#333333",
+            color: "#bbb",
             align: "W", // corner/side on which to align the y label
             location: "dynamic"
           }
@@ -1105,7 +1336,20 @@ var Grapheme = (function (exports) {
     updateAutoGridlines() {
       if (!deepEquals(this.old_vp, this.context.viewport)) {
         this.old_vp = {...this.context.viewport};
-        this.gridlines = [];
+        this.gridlines = {};
+        let that = this; // bruh
+
+        let gridline_count = 0;
+        function addGridline(gridline) {
+          if (++gridline_count > that.gridline_limit)
+            throw new Error("Too many gridlines");
+          let color = gridline.color || DEFAULT_COLOR;
+          if (that.gridlines[color]) {
+            that.gridlines[color].push(gridline);
+          } else {
+            that.gridlines[color] = [gridline];
+          }
+        }
 
         let ideal_xy = this.context.pixelToCartesianV(this.normal.ideal_dist, this.normal.ideal_dist);
 
@@ -1191,7 +1435,7 @@ var Grapheme = (function (exports) {
                   lcol: label.color
                 });
               }
-              this.gridlines.push(gridline);
+              addGridline(gridline);
             }
           }
         }
@@ -1220,7 +1464,7 @@ var Grapheme = (function (exports) {
                   lcol: label.color
                 });
               }
-              this.gridlines.push(gridline);
+              addGridline(gridline);
             }
           }
         }
@@ -1245,7 +1489,7 @@ var Grapheme = (function (exports) {
               lcol: labelx.color
             });
           }
-          this.gridlines.push(gridline);
+          addGridline(gridline);
         }
 
         // y
@@ -1265,10 +1509,8 @@ var Grapheme = (function (exports) {
               lcol: labely.color
             });
           }
-          this.gridlines.push(gridline);
+          addGridline(gridline);
         }
-
-        this.gridlines.splice(this.gridline_limit);
       }
     }
 

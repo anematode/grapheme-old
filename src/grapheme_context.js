@@ -48,7 +48,7 @@ class GraphemeContext {
     this.viewport = {x: 0, y: 0, width: 1, height: 1};
 
     // 0 <= r,g,b <= 255, 0 <= a <= 1 please!
-    this.clear_color = {r: 255, g: 100, b: 255, a: 0.5};
+    this.clear_color = {r: 5, g: 5, b: 5, a: 0.95};
 
     this._addResizeEventListeners();
   }
@@ -364,14 +364,14 @@ class GraphemeContext {
   }
 
   cartesianToGLY(y) {
-    return -2 * (y - this.viewport.y) / this.viewport.height;
+    return 2 * (y - this.viewport.y) / this.viewport.height;
   }
 
   cartesianToGLYFloatArray(arr) {
     let div_vh = 2 / this.viewport.height, vy = this.viewport.y;
 
     for (let i = 0; i < arr.length; ++i) {
-      arr[i] = -(vy - arr[i]) * div_vh;
+      arr[i] = (vy - arr[i]) * div_vh;
     }
 
     return arr;
@@ -392,17 +392,33 @@ class GraphemeContext {
   }
 
   cartesianToGLVY(y) {
-    return -2 * y / this.viewport.height;
+    return 2 * y / this.viewport.height;
   }
 
   cartesianToGLVYFloatArray(y) {
-    let hr = -2 / this.viewport.height;
+    let hr = 2 / this.viewport.height;
 
     for (let i = 0; i < arr.length; i++) {
       arr[i] = hr * arr[i];
     }
 
     return arr;
+  }
+
+  GLVXToCartesian(x) {
+    return this.viewport.width * x / 2;
+  }
+
+  GLVYToCartesian(y) {
+    return -this.viewport.height * y / 2;
+  }
+
+  pixelToGLVX(x) {
+    return 2 * x / this.width;
+  }
+
+  pixelToGLVY(y) {
+    return 2 * y / this.height;
   }
 
   minX() {
