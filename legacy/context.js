@@ -2,8 +2,8 @@ import * as utils from './utils';
 import {ContextElement} from "./context_element";
 
 class Context {
-  constructor(canvas, params={}) {
-    this.canvas = canvas;
+  constructor(params={}) {
+    this.canvas = params.normal_canvas canvas;
     this.canvas_ctx = canvas.getContext('2d');
 
     this.elements = [];
