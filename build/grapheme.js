@@ -1216,6 +1216,10 @@ void main() {
     }
   }
 
+  function compareViewports(vp1, vp2) {
+    return (vp1.x === vp2.x) && (vp1.y === vp2.y) && (vp1.width === vp2.width) && (vp1.height === vp2.height);
+  }
+
   let CDOT = String.fromCharCode(183);
 
   const LABEL_FUNCTIONS = {
@@ -1264,8 +1268,8 @@ void main() {
         }
       }, params.bold);
       this.normal = mergeDeep({
-        thickness: 0.5, // Thickness of the normal lines
-        color: 0xaaaaaaff, // Color of the normal lines
+        thickness: 0.8, // Thickness of the normal lines
+        color: 0xffffffff, // Color of the normal lines
         ideal_dist: 140, // ideal distance between lines in pixels
         display: true, // whether to display the lines
         label_function: "default",
@@ -1289,7 +1293,7 @@ void main() {
       }, params.normal);
       this.thin = mergeDeep({
         thickness: 0.2, // Thickness of the finer demarcations
-        color: 0x999999ff, // Color of the finer demarcations
+        color: 0xffffffff, // Color of the finer demarcations
         ideal_dist: 50, // ideal distance between lines in pixels
         display: true, // whether to display them
         label_function: "default",
@@ -1332,7 +1336,9 @@ void main() {
     }
 
     updateAutoGridlines() {
-      if (!deepEquals(this.old_vp, this.context.viewport)) {
+      if (!this.old_vp || !compareViewports(this.old_vp, this.context.viewport)) {
+        // only execute if the viewport has changed
+
         this.old_vp = {...this.context.viewport};
         this.gridlines = {};
         let that = this; // bruh
