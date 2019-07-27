@@ -1,4 +1,4 @@
-import {Context} from './context';
+import {GraphemeContext} from './grapheme_context';
 import * as utils from './utils';
 
 function getMouseOnCanvas(canvas, evt) {
@@ -6,19 +6,14 @@ function getMouseOnCanvas(canvas, evt) {
   return {x: evt.clientX - rect.left, y: evt.clientY - rect.top};
 }
 
-class InteractiveContext extends Context {
+class InteractiveContext extends GraphemeContext {
   constructor(context, params={}) {
     super(context, params);
 
-    this._addMouseEvtListeners();
-    this.interactivityEnabled = false;
-
+    this.interactivityEnabled = true;
     this.scrollSpeed = 1.4;
-  }
 
-  setFullscreen() {
-    this.width = document.body.clientWidth;
-    this.height = document.body.clientHeight;
+    this._addMouseEvtListeners();
   }
 
   _addMouseEvtListeners() {
@@ -33,7 +28,7 @@ class InteractiveContext extends Context {
     };
 
     for (let key in this.listeners) {
-      this.canvas.addEventListener(key, this.listeners[key]);
+      this.container_div.addEventListener(key, this.listeners[key]);
     }
   }
 
@@ -41,10 +36,9 @@ class InteractiveContext extends Context {
     this._listenersAdded = false;
 
     for (let key in this.listeners) {
-      this.canvas.removeEventListener(key, this.listeners[key]);
+      this.container_div.removeEventListener(key, this.listeners[key]);
       delete this.listeners[key];
     }
-
   }
 
   _mouseDown(evt) {
@@ -52,7 +46,7 @@ class InteractiveContext extends Context {
 
     let coords = getMouseOnCanvas(this.canvas, evt);
 
-    this._mouse_down_coordinates = this.canvasToCartesian(coords.x, coords.y);
+    this._mouse_down_coordinates = this.pixelToCartesian(coords.x, coords.y);
     this._is_mouse_down = true;
   }
 
@@ -71,7 +65,7 @@ class InteractiveContext extends Context {
 
 
     let coords = getMouseOnCanvas(this.canvas, evt);
-    let cartesian_coords = this.canvasToCartesian(coords.x, coords.y);
+    let cartesian_coords = this.pixelToCartesian(coords.x, coords.y);
 
     this.viewport.x -= cartesian_coords.x - this._mouse_down_coordinates.x;
     this.viewport.y -= cartesian_coords.y - this._mouse_down_coordinates.y;
@@ -81,7 +75,7 @@ class InteractiveContext extends Context {
     if (!this.interactivityEnabled) return;
 
     let coords = getMouseOnCanvas(this.canvas, evt);
-    let cartesian_coords = this.canvasToCartesian(coords.x, coords.y);
+    let cartesian_coords = this.pixelToCartesian(coords.x, coords.y);
 
     let scale_factor = Math.abs(Math.pow(this.scrollSpeed, evt.deltaY / 100));
 
@@ -89,7 +83,7 @@ class InteractiveContext extends Context {
     this.viewport.height *= scale_factor;
     this.viewport.width *= scale_factor;
 
-    let new_cartesian_coords = this.canvasToCartesian(coords.x, coords.y);
+    let new_cartesian_coords = this.pixelToCartesian(coords.x, coords.y);
 
     this.viewport.x += cartesian_coords.x - new_cartesian_coords.x;
     this.viewport.y += cartesian_coords.y - new_cartesian_coords.y;

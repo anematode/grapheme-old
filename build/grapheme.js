@@ -244,11 +244,13 @@ var Grapheme = (function (exports) {
     resizeCanvas() {
       let boundingRect = this.container_div.getBoundingClientRect();
 
-      this.width = this.canvas.width = devicePixelRatio * boundingRect.width;
-      this.height = this.canvas.height = devicePixelRatio * boundingRect.height;
+      this.cWidth = this.canvas.width = devicePixelRatio * boundingRect.width;
+      this.cHeight = this.canvas.height = devicePixelRatio * boundingRect.height;
+      this.width = boundingRect.width;
+      this.height = boundingRect.height;
 
       // set the GL viewport to the whole canvas
-      this.gl.viewport(0, 0, this.width, this.height);
+      this.gl.viewport(0, 0, this.cWidth, this.cHeight);
     }
 
     clearCanvas(color=this.clear_color) {
@@ -441,12 +443,12 @@ var Grapheme = (function (exports) {
 
     // For the GL canvas
 
-    cartesianToPixel(x,y) {
+    cartesianToGL(x,y) {
       return {x: this.width * ((x - this.viewport.x) / this.viewport.width + 0.5),
         y: this.height * (-(y - this.viewport.y) / this.viewport.height + 0.5)};
     }
 
-    cartesianToPixelFloatArray(arr) {
+    cartesianToGLFloatArray(arr) {
       let w = this.width, vw = this.viewport.width, vx = this.viewport.x;
       let h = this.height, vh = this.viewport.height, vy = this.viewport.y;
 
@@ -541,7 +543,97 @@ var Grapheme = (function (exports) {
 
   importGraphemeCSS();
 
-  exports.Context = GraphemeContext;
+  function getMouseOnCanvas(canvas, evt) {
+    let rect = canvas.getBoundingClientRect();
+    return {x: evt.clientX - rect.left, y: evt.clientY - rect.top};
+  }
+
+  class InteractiveContext extends GraphemeContext {
+    constructor(context, params={}) {
+      super(context, params);
+
+      this.interactivityEnabled = true;
+      this.scrollSpeed = 1.4;
+
+      this._addMouseEvtListeners();
+    }
+
+    _addMouseEvtListeners() {
+      assert(!this._listenersAdded, "listeners already added!");
+      this._listenersAdded = true;
+
+      this.listeners = {
+        "mousedown": evt => this._mouseDown(evt),
+        "mouseup": evt => this._mouseUp(evt),
+        "mousemove": evt => this._mouseMove(evt),
+        "wheel": evt => this._onScroll(evt)
+      };
+
+      for (let key in this.listeners) {
+        this.container_div.addEventListener(key, this.listeners[key]);
+      }
+    }
+
+    _removeMouseEvtListeners() {
+      this._listenersAdded = false;
+
+      for (let key in this.listeners) {
+        this.container_div.removeEventListener(key, this.listeners[key]);
+        delete this.listeners[key];
+      }
+    }
+
+    _mouseDown(evt) {
+      if (!this.interactivityEnabled) return;
+
+      let coords = getMouseOnCanvas(this.canvas, evt);
+
+      this._mouse_down_coordinates = this.pixelToCartesian(coords.x, coords.y);
+      this._is_mouse_down = true;
+    }
+
+    _mouseUp(evt) {
+      if (!this.interactivityEnabled) return;
+
+      let coords = getMouseOnCanvas(this.canvas, evt);
+
+      this._is_mouse_down = false;
+    }
+
+    _mouseMove(evt) {
+      if (!this.interactivityEnabled) return;
+
+      if (!this._is_mouse_down) return;
+
+
+      let coords = getMouseOnCanvas(this.canvas, evt);
+      let cartesian_coords = this.pixelToCartesian(coords.x, coords.y);
+
+      this.viewport.x -= cartesian_coords.x - this._mouse_down_coordinates.x;
+      this.viewport.y -= cartesian_coords.y - this._mouse_down_coordinates.y;
+    }
+
+    _onScroll(evt) {
+      if (!this.interactivityEnabled) return;
+
+      let coords = getMouseOnCanvas(this.canvas, evt);
+      let cartesian_coords = this.pixelToCartesian(coords.x, coords.y);
+
+      let scale_factor = Math.abs(Math.pow(this.scrollSpeed, evt.deltaY / 100));
+
+      // We want coords to be fixed
+      this.viewport.height *= scale_factor;
+      this.viewport.width *= scale_factor;
+
+      let new_cartesian_coords = this.pixelToCartesian(coords.x, coords.y);
+
+      this.viewport.x += cartesian_coords.x - new_cartesian_coords.x;
+      this.viewport.y += cartesian_coords.y - new_cartesian_coords.y;
+    }
+  }
+
+  exports.GraphemeContext = GraphemeContext;
+  exports.InteractiveContext = InteractiveContext;
   exports.utils = utils;
 
   return exports;

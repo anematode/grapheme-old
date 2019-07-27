@@ -111,11 +111,13 @@ class GraphemeContext {
   resizeCanvas() {
     let boundingRect = this.container_div.getBoundingClientRect();
 
-    this.width = this.canvas.width = devicePixelRatio * boundingRect.width;
-    this.height = this.canvas.height = devicePixelRatio * boundingRect.height;
+    this.cWidth = this.canvas.width = devicePixelRatio * boundingRect.width;
+    this.cHeight = this.canvas.height = devicePixelRatio * boundingRect.height;
+    this.width = boundingRect.width;
+    this.height = boundingRect.height;
 
     // set the GL viewport to the whole canvas
-    this.gl.viewport(0, 0, this.width, this.height);
+    this.gl.viewport(0, 0, this.cWidth, this.cHeight);
   }
 
   clearCanvas(color=this.clear_color) {
@@ -308,12 +310,12 @@ class GraphemeContext {
 
   // For the GL canvas
 
-  cartesianToPixel(x,y) {
+  cartesianToGL(x,y) {
     return {x: this.width * ((x - this.viewport.x) / this.viewport.width + 0.5),
       y: this.height * (-(y - this.viewport.y) / this.viewport.height + 0.5)};
   }
 
-  cartesianToPixelFloatArray(arr) {
+  cartesianToGLFloatArray(arr) {
     let w = this.width, vw = this.viewport.width, vx = this.viewport.x;
     let h = this.height, vh = this.viewport.height, vy = this.viewport.y;
 
@@ -408,4 +410,4 @@ class GraphemeContext {
 
 importGraphemeCSS();
 
-export {GraphemeContext as Context};
+export {GraphemeContext};
