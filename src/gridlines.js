@@ -1,6 +1,32 @@
 import * as utils from "./utils";
 import {ContextElement} from "./context_element";
 
+function getAnchor(ta, bl) {
+  let ns, ew;
+
+  switch (ta) {
+    case "E":
+      ew = "E";
+      break;
+    case "W":
+      ew = "W";
+      break;
+    default:
+      ew = '';
+  }
+
+  switch (bl) {
+    case "N":
+      ns = "N";
+    case "S":
+      ns = "S";
+    default:
+      ew = ''
+  }
+
+  return ns + ew;
+}
+
 class Gridlines extends ContextElement {
   constructor(context, params={}) {
     super(context, params);
@@ -15,9 +41,11 @@ class Gridlines extends ContextElement {
     // example gridline: {dir: 'x', pos: 0.8, pen: 0.5, color: "#000000", label: "0.8", lpos: 'l'', font: "15px Helvetica"}
   }
 
-  draw(canvas, ctx, info) {
-    super.draw(canvas, ctx, info);
-    let canvas_ctx = ctx;
+  drawFancy(info) {
+    super.draw(info);
+    let gl = this.context.gl;
+
+    this.fancy_ticket.clearElements();
 
     let currentThickness = 0;
     let currentColor = "";
@@ -26,132 +54,93 @@ class Gridlines extends ContextElement {
     let currentTextAlignment = "";
     let currentFontColor = "";
 
-    ctx.font = "15px Helvetica";
-    ctx.fillStyle = "#000000";
-
     let maxY = this.context.maxY();
     let maxX = this.context.maxX();
     let minY = this.context.minY();
     let minX = this.context.minX();
 
-    let labelX, labelY;
+    let labelPos = {};
 
     for (let i = 0; i < this.gridlines.length; ++i) {
       let gridline = this.gridlines[i];
 
-      if (gridline.pen != currentThickness) {
-        currentThickness = ctx.lineWidth = gridline.pen;
-      }
-
-      if (gridline.color != currentColor) {
-        currentColor = ctx.strokeStyle = gridline.color;
-      }
-
-      if (gridline.font && gridline.font != currentFont) {
-        currentFont = ctx.font = gridline.font;
-      }
-
-      if (gridline.lcol && gridline.lcol != currentFontColor) {
-        currentFontColor = ctx.fillStyle = gridline.lcol;
-      }
-
-      let textBaseline = gridline.bl || "bottom", textAlign = gridline.ta || "left";
-
-      canvas_ctx.beginPath();
+      let textNorthSouth = gridline.bl || "N", textEastWest = gridline.ta || "E";
 
       switch (gridline.dir) {
         case 'x':
-          let canv_x_coord = utils.roundToCanvasCoord(
-            this.context.cartesianToCanvasX(gridline.pos)
-          );
-
-          // draw the actual grid line
-          canvas_ctx.moveTo(canv_x_coord, 0);
-          canvas_ctx.lineTo(canv_x_coord, this.context.height);
-          canvas_ctx.stroke();
+          let canv_x_coord = this.context.cartesianToPixelX(gridline.pos);
 
           if (gridline.label) { // label the gridline
             let y_draw_pos; // y position of the label
 
             switch (gridline.lpos) { // label position
               case "top":
-                y_draw_pos = 0;
-                textBaseline = "top";
+                y_draw_pos = 0, textNorthSouth = "S";
                 break;
               case "bottom":
-                y_draw_pos = canvas.height;
-                textBaseline = "bottom";
+                y_draw_pos = canvas.height, textNorthSouth = "N";
                 break;
               case "axis":
-                y_draw_pos = this.context.cartesianToCanvasY(0);
+                y_draw_pos = this.context.cartesianToPixelY(0);
                 break;
               case "dynamic":
                 if (0 > maxY) { // put label at the top of the canvas
                   y_draw_pos = 0;
-                  textBaseline = "top";
+                  textNorthSouth = "S";
                 } else if (0 < minY) { // put label at bottom of canvas
                   y_draw_pos = canvas.height;
-                  textBaseline = "bottom";
+                  textNorthSouth = "N";
                 } else {
-                  y_draw_pos = this.context.cartesianToCanvasY(0);
+                  y_draw_pos = this.context.cartesianToPixelY(0);
                 }
             }
 
-            labelX = canv_x_coord, labelY = y_draw_pos;
+            labelPos.x = canv_x_coord, labelPos.y = y_draw_pos;
           }
           break;
         case 'y':
           let canv_y_coord = utils.roundToCanvasCoord(
-            this.context.cartesianToCanvasY(gridline.pos)
+            this.context.cartesianToPixelY(gridline.pos)
           );
-
-          canvas_ctx.moveTo(0, canv_y_coord);
-          canvas_ctx.lineTo(this.context.width, canv_y_coord);
-          canvas_ctx.stroke();
 
           if (gridline.label !== undefined) {
             let x_draw_pos;
 
-            switch (gridline.lpos) { // label position
+            switch (gridline.lpos) {
               case "left":
                 x_draw_pos = 0;
-                textAlign = "left";
+                textEastWest = "E";
                 break;
               case "right":
                 x_draw_pos = canvas.height;
-                textAlign = "right";
+                textEastWest = "W";
                 break;
               case "axis":
-                x_draw_pos = this.context.cartesianToCanvasX(0);
+                x_draw_pos = this.context.cartesianToPixelX(0);
                 break;
               case "dynamic":
                 if (0 > maxX) { // put label at the right of the canvas
                   x_draw_pos = canvas.width;
-                  textAlign = "right";
+                  textEastWest = "W";
                 } else if (0 < minX) { // put label at left of canvas
                   x_draw_pos = 0;
-                  textAlign = "left";
+                  textEastWest = "E";
                 } else {
-                  x_draw_pos = this.context.cartesianToCanvasX(0);
+                  x_draw_pos = this.context.cartesianToPixelX(0);
                 }
             }
 
-            labelX = x_draw_pos, labelY = canv_y_coord;
+            labelPos.x = x_draw_pos, labelPos.y = canv_y_coord;
 
           break;
         }
       }
 
       if (gridline.label) {
-        if (textBaseline != currentTextBaseline) {
-          currentTextBaseline = ctx.textBaseline = textBaseline;
-        }
+        let text_elem = this.fancy_ticket.addText(gridline.label,
+          {x: labelPos.x, y: labelPos.y}, getAnchor(textEastWest, textNorthSouth));
 
-        if (textAlign != currentTextAlignment) {
-          currentTextAlignment = ctx.textAlign = textAlign;
-        }
-
-        ctx.fillText(gridline.label, labelX, labelY);
+        text_elem.classList.add(gridline.class);
       }
     }
   }
@@ -161,14 +150,14 @@ function getTextBaseline(anchor) {
   try {
     switch (anchor[0]) {
       case "S":
-        return "top";
+        return "S";
       case "N":
-        return "bottom";
+        return "N";
       default:
-        return "middle";
+        return "";
     }
   } catch (e) {
-    return "middle";
+    return "";
   }
 }
 
@@ -176,14 +165,14 @@ function getTextAlign(anchor) {
   try {
     switch (anchor.substr(-1)) {
       case "E":
-        return "left";
+        return "E";
       case "W":
-        return "right";
+        return "W";
       default:
-        return "center";
+        return "";
     }
   } catch (e) {
-    return "center";
+    return "";
   }
 }
 
@@ -264,16 +253,14 @@ class AutoGridlines extends Gridlines {
       labels: {
         x: {
           display: true,
-          font: "bold 15px Helvetica",
-          color: "#000000",
+          class: "grapheme-bl",
           align: "SW", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
           location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
         },
         y: {
           display: true,
-          font: "bold 15px Helvetica",
-          color: "#000000",
+          class: "grapheme-bl",
           align: "SW", // corner/side on which to align the y label
           location: "dynamic" // can be axis, left, right, or dynamic (switches between)
         }
@@ -288,16 +275,14 @@ class AutoGridlines extends Gridlines {
       labels: {
         x: {
           display: true,
-          font: "14px Helvetica",
-          color: "#000000",
+          class: "grapheme-nl",
           align: "SE", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
           location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
         },
         y: {
           display: true,
-          font: "14px Helvetica",
-          color: "#000000",
+          class: "grapheme-nl",
           align: "W", // corner/side on which to align the y label
           location: "dynamic"
         }
@@ -312,16 +297,14 @@ class AutoGridlines extends Gridlines {
       labels: {
         x: {
           display: false,
-          font: "10px Helvetica",
-          color: "#333333",
+          class: "grapheme-ll",
           align: "S", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
           location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
         },
         y: {
           display: true,
-          font: "8px Helvetica",
-          color: "#333333",
+          class: "grapheme-ll",
           align: "W", // corner/side on which to align the y label
           location: "dynamic"
         }
@@ -352,7 +335,7 @@ class AutoGridlines extends Gridlines {
       this.old_vp = {...this.context.viewport};
       this.gridlines = [];
 
-      let ideal_xy = this.context.canvasToCartesianV(this.normal.ideal_dist, this.normal.ideal_dist);
+      let ideal_xy = this.context.pixelToCartesianV(this.normal.ideal_dist, this.normal.ideal_dist);
 
       // unpack the values
       let ideal_x_normal_spacing = Math.abs(ideal_xy.x);
@@ -364,8 +347,8 @@ class AutoGridlines extends Gridlines {
       let true_xn_spacing = 10 ** Math.round(Math.log10(ideal_x_normal_spacing));
       let true_yn_spacing = 10 ** Math.round(Math.log10(ideal_y_normal_spacing));
 
-      let ideal_x_thin_spacing_denom = this.context.cartesianToCanvasVX(true_xn_spacing) / this.thin.ideal_dist;
-      let ideal_y_thin_spacing_denom = -this.context.cartesianToCanvasVY(true_yn_spacing) / this.thin.ideal_dist;
+      let ideal_x_thin_spacing_denom = this.context.cartesianToPixelVX(true_xn_spacing) / this.thin.ideal_dist;
+      let ideal_y_thin_spacing_denom = -this.context.cartesianToPixelVY(true_yn_spacing) / this.thin.ideal_dist;
 
       // alias for brevity
       let tspt = this.thin_spacing_types;
@@ -405,10 +388,8 @@ class AutoGridlines extends Gridlines {
       let true_yt_spacing = true_yn_spacing / y_denom;
 
       // precomputed for brevity
-      let minx = this.context.minX();
-      let miny = this.context.minY();
-      let maxx = this.context.maxX();
-      let maxy = this.context.maxY();
+      let minx = this.context.minX(), miny = this.context.minY();
+      let maxx = this.context.maxX(), maxy = this.context.maxY();
 
       if (this.thin.display) {
         // Thin lines
@@ -432,8 +413,7 @@ class AutoGridlines extends Gridlines {
                 bl: getTextBaseline(label.align), // baseline
                 ta: getTextAlign(label.align), // textalign
                 lpos: label.location,
-                font: label.font,
-                lcol: label.color
+                class: label.class
               });
             }
             this.gridlines.push(gridline);
@@ -461,8 +441,7 @@ class AutoGridlines extends Gridlines {
                 bl: getTextBaseline(label.align), // baseline
                 ta: getTextAlign(label.align), // textalign
                 lpos: label.location,
-                font: label.font,
-                lcol: label.color
+                class: label.class
               });
             }
             this.gridlines.push(gridline);
@@ -486,8 +465,7 @@ class AutoGridlines extends Gridlines {
             bl: getTextBaseline(labelx.align), // baseline
             ta: getTextAlign(labelx.align), // textalign
             lpos: labelx.location,
-            font: labelx.font,
-            lcol: labelx.color
+            class: labelx.class
           });
         }
         this.gridlines.push(gridline);
@@ -506,20 +484,23 @@ class AutoGridlines extends Gridlines {
             bl: getTextBaseline(labely.align), // baseline
             ta: getTextAlign(labely.align), // textalign
             lpos: labely.location,
-            font: labely.font,
-            lcol: labely.color
+            class: labely.class
           });
         }
         this.gridlines.push(gridline);
       }
 
       this.gridlines.splice(this.gridline_limit);
+
+      return false;
     }
+
+    return true;
   }
 
-  draw(canvas, canvas_ctx, info) {
-    this.updateAutoGridlines();
-    super.draw(canvas, canvas_ctx, info);
+  draw(info) {
+    if (!this.updateAutoGridlines())
+      this.drawFancy();
   }
 }
 

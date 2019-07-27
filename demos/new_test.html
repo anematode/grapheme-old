@@ -12,6 +12,14 @@
 let grapheme_context = new Grapheme.InteractiveContext({
   container_div: document.getElementById("grapheme-container")
 });
+let gridlines = new Grapheme.AutoGridlines(grapheme_context);
+
+let render = function() {
+  grapheme_context.drawFrame();
+  requestAnimationFrame(render);
+}
+
+window.onload = render;
 </script>
 
 </html>

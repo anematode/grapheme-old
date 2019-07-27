@@ -1,4 +1,5 @@
 import * as utils from './utils';
+import {FancyDiv} from "./fancy_div";
 import {ContextElement} from "./context_element";
 
 function importGraphemeCSS() {
@@ -24,9 +25,11 @@ class GraphemeContext {
 
     this.canvas = document.createElement("canvas");
     this.container_div.appendChild(this.canvas);
-    this.fancy_div = document.createElement("div");
-    this.fancy_div.setAttribute("class", "grapheme-fancy-div");
-    this.container_div.append(this.fancy_div);
+    let fancy_div_elem = document.createElement("div");
+    fancy_div_elem.setAttribute("class", "grapheme-fancy-div");
+    this.container_div.append(fancy_div_elem);
+
+    this.fancy_div = new FancyDiv(fancy_div_elem);
 
     this.gl = this.canvas.getContext("webgl") || this.canvas.getContext("experimental-webgl");
     utils.assert(this.gl, "This browser does not support WebGL, which is required by Grapheme");
@@ -40,6 +43,15 @@ class GraphemeContext {
     this.clear_color = {r: 255, g: 100, b: 255, a: 0.5};
 
     this._addResizeEventListeners();
+  }
+
+  drawFrame() {
+    this.clearCanvas();
+    let info = {viewport: this.viewport};
+
+    for (let i = 0; i < this.elements.length; ++i) {
+      this.elements[i].draw(this.canvas, this.canvas_ctx, info);
+    }
   }
 
   // Element manipulation stuffs
