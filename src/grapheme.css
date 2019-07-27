@@ -33,10 +33,42 @@ html, body {
   margin: 0;
 }
 
-.fancy-child {
+div.grapheme-fancy-div > p {
   position: absolute;
   z-index: 2;
   margin: 0;
+}
+
+.grapheme-ll-x {
+  font-family: Helvetica;
+  font-size: 8px;
+  color: #444444;
+  transform: rotate(-45deg);
+}
+
+.grapheme-ll-y {
+  font-family: Helvetica;
+  font-size: 8px;
+  color: #444444;
+}
+
+.grapheme-nl-x {
+  font-family: Helvetica;
+  font-size: 14px;
+  color: #000000;
+  transform: rotate(-45deg);
+}
+
+.grapheme-nl-y {
+  font-family: Helvetica;
+  font-size: 14px;
+  color: #000000;
+}
+
+.grapheme-bl {
+  font-family: Helvetica;
+  font-size: 14px;
+  color: #000000;
 }
 
 .fancy-text-S {

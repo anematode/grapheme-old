@@ -18,8 +18,10 @@ function getAnchor(ta, bl) {
   switch (bl) {
     case "N":
       ns = "N";
+      break;
     case "S":
       ns = "S";
+      break;
     default:
       ew = ''
   }
@@ -78,7 +80,7 @@ class Gridlines extends ContextElement {
                 y_draw_pos = 0, textNorthSouth = "S";
                 break;
               case "bottom":
-                y_draw_pos = canvas.height, textNorthSouth = "N";
+                y_draw_pos = this.context.height, textNorthSouth = "N";
                 break;
               case "axis":
                 y_draw_pos = this.context.cartesianToPixelY(0);
@@ -88,7 +90,7 @@ class Gridlines extends ContextElement {
                   y_draw_pos = 0;
                   textNorthSouth = "S";
                 } else if (0 < minY) { // put label at bottom of canvas
-                  y_draw_pos = canvas.height;
+                  y_draw_pos = this.context.height;
                   textNorthSouth = "N";
                 } else {
                   y_draw_pos = this.context.cartesianToPixelY(0);
@@ -112,7 +114,7 @@ class Gridlines extends ContextElement {
                 textEastWest = "E";
                 break;
               case "right":
-                x_draw_pos = canvas.height;
+                x_draw_pos = this.context.width;
                 textEastWest = "W";
                 break;
               case "axis":
@@ -120,7 +122,7 @@ class Gridlines extends ContextElement {
                 break;
               case "dynamic":
                 if (0 > maxX) { // put label at the right of the canvas
-                  x_draw_pos = canvas.width;
+                  x_draw_pos = this.context.width;
                   textEastWest = "W";
                 } else if (0 < minX) { // put label at left of canvas
                   x_draw_pos = 0;
@@ -209,7 +211,7 @@ function exponentify(integer) {
 }
 
 // https://stackoverflow.com/a/20439411
-function beautifyFloat(f, prec=15) {
+function beautifyFloat(f, prec=10) {
   let strf = f.toFixed(prec);
   if (strf.includes('.')) {
     return strf.replace(/\.?0+$/g,'');
@@ -232,7 +234,7 @@ const LABEL_FUNCTIONS = {
       let mantissa = x / (10 ** exponent);
 
       let prefix = (utils.isApproxEqual(mantissa,1) ? '' : (beautifyFloat(mantissa, 8) + CDOT));
-      let exponent_suffix = "10" + exponentify(exponent);
+      let exponent_suffix = "10<sup>" + exponent + "</sup>";
 
       return prefix + exponent_suffix;
     }
@@ -275,14 +277,14 @@ class AutoGridlines extends Gridlines {
       labels: {
         x: {
           display: true,
-          class: "grapheme-nl",
+          class: "grapheme-nl-x",
           align: "SE", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
           location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
         },
         y: {
           display: true,
-          class: "grapheme-nl",
+          class: "grapheme-nl-y",
           align: "W", // corner/side on which to align the y label
           location: "dynamic"
         }
@@ -296,15 +298,15 @@ class AutoGridlines extends Gridlines {
       label_function: "default",
       labels: {
         x: {
-          display: false,
-          class: "grapheme-ll",
+          display: true,
+          class: "grapheme-ll-x",
           align: "S", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
           location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
         },
         y: {
           display: true,
-          class: "grapheme-ll",
+          class: "grapheme-ll-y",
           align: "W", // corner/side on which to align the y label
           location: "dynamic"
         }

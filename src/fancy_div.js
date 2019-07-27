@@ -28,7 +28,6 @@ class _FancyTicket {
 
   addElement(tag, classes, location = DEFAULT_LOCATION) {
     let element = document.createElement(tag);
-    element.classList.add("fancy-child");
     element.classList.add(this.id);
 
     setElementLocation(element, location.x, location.y)
@@ -49,10 +48,10 @@ class _FancyTicket {
 
   addText(text="cow", location=DEFAULT_LOCATION, align="SE") {
     if (!alignment_types.includes(align))
-      align = "C"
+      align = "C";
 
     let elem = this.addElement("p", ["fancy-text-" + align], location);
-    elem.innerText = text;
+    elem.innerHTML = text;
 
     return elem;
   }

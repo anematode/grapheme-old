@@ -147,7 +147,6 @@ var Grapheme = (function (exports) {
 
     addElement(tag, classes, location = DEFAULT_LOCATION) {
       let element = document.createElement(tag);
-      element.classList.add("fancy-child");
       element.classList.add(this.id);
 
       setElementLocation(element, location.x, location.y);
@@ -171,7 +170,7 @@ var Grapheme = (function (exports) {
         align = "C";
 
       let elem = this.addElement("p", ["fancy-text-" + align], location);
-      elem.innerText = text;
+      elem.innerHTML = text;
 
       return elem;
     }
@@ -783,8 +782,10 @@ var Grapheme = (function (exports) {
     switch (bl) {
       case "N":
         ns = "N";
+        break;
       case "S":
         ns = "S";
+        break;
       default:
         ew = '';
     }
@@ -836,7 +837,7 @@ var Grapheme = (function (exports) {
                   y_draw_pos = 0, textNorthSouth = "S";
                   break;
                 case "bottom":
-                  y_draw_pos = canvas.height, textNorthSouth = "N";
+                  y_draw_pos = this.context.height, textNorthSouth = "N";
                   break;
                 case "axis":
                   y_draw_pos = this.context.cartesianToPixelY(0);
@@ -846,7 +847,7 @@ var Grapheme = (function (exports) {
                     y_draw_pos = 0;
                     textNorthSouth = "S";
                   } else if (0 < minY) { // put label at bottom of canvas
-                    y_draw_pos = canvas.height;
+                    y_draw_pos = this.context.height;
                     textNorthSouth = "N";
                   } else {
                     y_draw_pos = this.context.cartesianToPixelY(0);
@@ -870,7 +871,7 @@ var Grapheme = (function (exports) {
                   textEastWest = "E";
                   break;
                 case "right":
-                  x_draw_pos = canvas.height;
+                  x_draw_pos = this.context.width;
                   textEastWest = "W";
                   break;
                 case "axis":
@@ -878,7 +879,7 @@ var Grapheme = (function (exports) {
                   break;
                 case "dynamic":
                   if (0 > maxX) { // put label at the right of the canvas
-                    x_draw_pos = canvas.width;
+                    x_draw_pos = this.context.width;
                     textEastWest = "W";
                   } else if (0 < minX) { // put label at left of canvas
                     x_draw_pos = 0;
@@ -967,7 +968,7 @@ var Grapheme = (function (exports) {
   }
 
   // https://stackoverflow.com/a/20439411
-  function beautifyFloat(f, prec=15) {
+  function beautifyFloat(f, prec=10) {
     let strf = f.toFixed(prec);
     if (strf.includes('.')) {
       return strf.replace(/\.?0+$/g,'');
@@ -987,7 +988,7 @@ var Grapheme = (function (exports) {
         let mantissa = x / (10 ** exponent);
 
         let prefix = (isApproxEqual(mantissa,1) ? '' : (beautifyFloat(mantissa, 8) + CDOT));
-        let exponent_suffix = "10" + exponentify(exponent);
+        let exponent_suffix = "10<sup>" + exponent + "</sup>";
 
         return prefix + exponent_suffix;
       }
@@ -1028,14 +1029,14 @@ var Grapheme = (function (exports) {
         labels: {
           x: {
             display: true,
-            class: "grapheme-nl",
+            class: "grapheme-nl-x",
             align: "SE", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
             location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
           },
           y: {
             display: true,
-            class: "grapheme-nl",
+            class: "grapheme-nl-y",
             align: "W", // corner/side on which to align the y label
             location: "dynamic"
           }
@@ -1049,15 +1050,15 @@ var Grapheme = (function (exports) {
         label_function: "default",
         labels: {
           x: {
-            display: false,
-            class: "grapheme-ll",
+            display: true,
+            class: "grapheme-ll-x",
             align: "S", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
             location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
           },
           y: {
             display: true,
-            class: "grapheme-ll",
+            class: "grapheme-ll-y",
             align: "W", // corner/side on which to align the y label
             location: "dynamic"
           }

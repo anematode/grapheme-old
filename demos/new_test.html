@@ -15,9 +15,10 @@ let grapheme_context = new Grapheme.InteractiveContext({
 let gridlines = new Grapheme.AutoGridlines(grapheme_context);
 
 let render = function() {
+  grapheme_context.viewport.height = grapheme_context.viewport.width * grapheme_context.height / grapheme_context.width;
   grapheme_context.drawFrame();
   requestAnimationFrame(render);
-}
+};
 
 window.onload = render;
 </script>
