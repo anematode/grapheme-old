@@ -132,7 +132,7 @@ class GraphemeContext {
     let boundingRect = this.container_div.getBoundingClientRect();
 
     this.width = this.canvas.width = this.text_canvas.width = devicePixelRatio * boundingRect.width;
-    this.weight = this.canvas.height = this.text_canvas.height = devicePixelRatio * boundingRect.height;
+    this.height = this.canvas.height = this.text_canvas.height = devicePixelRatio * boundingRect.height;
 
     // set the GL viewport to the whole canvas
     this.gl.viewport(0, 0, this.cWidth, this.cHeight);
