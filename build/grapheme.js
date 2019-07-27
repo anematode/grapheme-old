@@ -279,13 +279,21 @@ var Grapheme = (function (exports) {
 
       this.canvas = document.createElement("canvas");
       this.container_div.appendChild(this.canvas);
+      this.text_canvas = document.createElement("canvas");
+      this.container_div.appendChild(this.text_canvas);
+
+      this.canvas.classList.add("grapheme-canvas");
+      this.text_canvas.classList.add("grapheme-text-canvas");
+
       let fancy_div_elem = document.createElement("div");
-      fancy_div_elem.setAttribute("class", "grapheme-fancy-div");
+      fancy_div_elem.classList.add("grapheme-fancy-div");
       this.container_div.append(fancy_div_elem);
 
       this.fancy_div = new FancyDiv(fancy_div_elem);
 
+      this.text_canvas_ctx = this.text_canvas.getContext("2d");
       this.gl = this.canvas.getContext("webgl") || this.canvas.getContext("experimental-webgl");
+
       assert(this.gl, "This browser does not support WebGL, which is required by Grapheme");
 
       this.elements = [];
@@ -377,8 +385,8 @@ var Grapheme = (function (exports) {
     resizeCanvas() {
       let boundingRect = this.container_div.getBoundingClientRect();
 
-      this.cWidth = this.canvas.width = devicePixelRatio * boundingRect.width;
-      this.cHeight = this.canvas.height = devicePixelRatio * boundingRect.height;
+      this.cWidth = this.canvas.width = this.text_canvas.width = devicePixelRatio * boundingRect.width;
+      this.cHeight = this.canvas.height = this.text_canvas.height = devicePixelRatio * boundingRect.height;
       this.width = boundingRect.width;
       this.height = boundingRect.height;
 
@@ -394,6 +402,8 @@ var Grapheme = (function (exports) {
 
       // set all colors to the COLOR_CLEAR_VALUE
       gl.clear(gl.COLOR_BUFFER_BIT);
+
+      this.text_canvas_ctx.clearRect(0, 0, this.width, this.height);
     }
 
     pixelToCartesian(x,y) {
@@ -765,34 +775,6 @@ var Grapheme = (function (exports) {
     }
   }
 
-  function getAnchor(ta, bl) {
-    let ns, ew;
-
-    switch (ta) {
-      case "E":
-        ew = "E";
-        break;
-      case "W":
-        ew = "W";
-        break;
-      default:
-        ew = '';
-    }
-
-    switch (bl) {
-      case "N":
-        ns = "N";
-        break;
-      case "S":
-        ns = "S";
-        break;
-      default:
-        ew = '';
-    }
-
-    return ns + ew;
-  }
-
   class Gridlines extends ContextElement {
     constructor(context, params={}) {
       super(context, params);
@@ -804,26 +786,51 @@ var Grapheme = (function (exports) {
       // label text (if desired), lpos ('l','r')
       this.gridlines = [];
 
-      // example gridline: {dir: 'x', pos: 0.8, pen: 0.5, color: "#000000", label: "0.8", lpos: 'l'', font: "15px Helvetica"}
+      // example gridline:
+      // {dir: 'x', pos: 0.8, pen: 0.5, color: "#000000", label: "0.8", lpos: 'l'', font: "15px Helvetica"}
     }
 
-    drawFancy(info) {
+    draw(info) {
       super.draw(info);
-      let gl = this.context.gl;
+      let ctx = this.context.text_canvas_ctx;
 
-      this.fancy_ticket.clearElements();
+      let currentThickness = 0;
+      let currentColor = "";
+      let currentFont = "";
+      let currentTextBaseline = "";
+      let currentTextAlignment = "";
+      let currentFontColor = "";
+
+      ctx.font = "15px Helvetica";
+      ctx.fillStyle = "#000000";
 
       let maxY = this.context.maxY();
       let maxX = this.context.maxX();
       let minY = this.context.minY();
       let minX = this.context.minX();
 
-      let labelPos = {};
+      let labelX, labelY;
 
       for (let i = 0; i < this.gridlines.length; ++i) {
         let gridline = this.gridlines[i];
 
-        let textNorthSouth = gridline.bl || "N", textEastWest = gridline.ta || "E";
+        if (gridline.pen != currentThickness) {
+          currentThickness = ctx.lineWidth = gridline.pen;
+        }
+
+        if (gridline.color != currentColor) {
+          currentColor = ctx.strokeStyle = gridline.color;
+        }
+
+        if (gridline.font && gridline.font != currentFont) {
+          currentFont = ctx.font = gridline.font;
+        }
+
+        if (gridline.lcol && gridline.lcol != currentFontColor) {
+          currentFontColor = ctx.fillStyle = gridline.lcol;
+        }
+
+        let textBaseline = gridline.bl || "bottom", textAlign = gridline.ta || "left";
 
         switch (gridline.dir) {
           case 'x':
@@ -834,10 +841,12 @@ var Grapheme = (function (exports) {
 
               switch (gridline.lpos) { // label position
                 case "top":
-                  y_draw_pos = 0, textNorthSouth = "S";
+                  y_draw_pos = 0;
+                  textBaseline = "top";
                   break;
                 case "bottom":
-                  y_draw_pos = this.context.height, textNorthSouth = "N";
+                  y_draw_pos = this.context.height;
+                  textBaseline = "bottom";
                   break;
                 case "axis":
                   y_draw_pos = this.context.cartesianToPixelY(0);
@@ -845,34 +854,32 @@ var Grapheme = (function (exports) {
                 case "dynamic":
                   if (0 > maxY) { // put label at the top of the canvas
                     y_draw_pos = 0;
-                    textNorthSouth = "S";
+                    textBaseline = "top";
                   } else if (0 < minY) { // put label at bottom of canvas
                     y_draw_pos = this.context.height;
-                    textNorthSouth = "N";
+                    textBaseline = "bottom";
                   } else {
                     y_draw_pos = this.context.cartesianToPixelY(0);
                   }
               }
 
-              labelPos.x = canv_x_coord, labelPos.y = y_draw_pos;
+              labelX = canv_x_coord, labelY = y_draw_pos;
             }
             break;
           case 'y':
-            let canv_y_coord = roundToCanvasCoord(
-              this.context.cartesianToPixelY(gridline.pos)
-            );
+            let canv_y_coord = this.context.cartesianToPixelY(gridline.pos);
 
             if (gridline.label !== undefined) {
               let x_draw_pos;
 
-              switch (gridline.lpos) {
+              switch (gridline.lpos) { // label position
                 case "left":
                   x_draw_pos = 0;
-                  textEastWest = "E";
+                  textAlign = "left";
                   break;
                 case "right":
                   x_draw_pos = this.context.width;
-                  textEastWest = "W";
+                  textAlign = "right";
                   break;
                 case "axis":
                   x_draw_pos = this.context.cartesianToPixelX(0);
@@ -880,26 +887,31 @@ var Grapheme = (function (exports) {
                 case "dynamic":
                   if (0 > maxX) { // put label at the right of the canvas
                     x_draw_pos = this.context.width;
-                    textEastWest = "W";
+                    textAlign = "right";
                   } else if (0 < minX) { // put label at left of canvas
                     x_draw_pos = 0;
-                    textEastWest = "E";
+                    textAlign = "left";
                   } else {
                     x_draw_pos = this.context.cartesianToPixelX(0);
                   }
               }
 
-              labelPos.x = x_draw_pos, labelPos.y = canv_y_coord;
+              labelX = x_draw_pos, labelY = canv_y_coord;
 
             break;
           }
         }
 
         if (gridline.label) {
-          let text_elem = this.fancy_ticket.addText(gridline.label,
-            {x: labelPos.x, y: labelPos.y}, getAnchor(textEastWest, textNorthSouth));
+          if (textBaseline != currentTextBaseline) {
+            currentTextBaseline = ctx.textBaseline = textBaseline;
+          }
 
-          text_elem.classList.add(gridline.class);
+          if (textAlign != currentTextAlignment) {
+            currentTextAlignment = ctx.textAlign = textAlign;
+          }
+
+          ctx.fillText(gridline.label, labelX, labelY);
         }
       }
     }
@@ -909,14 +921,14 @@ var Grapheme = (function (exports) {
     try {
       switch (anchor[0]) {
         case "S":
-          return "S";
+          return "top";
         case "N":
-          return "N";
+          return "bottom";
         default:
-          return "";
+          return "middle";
       }
     } catch (e) {
-      return "";
+      return "middle";
     }
   }
 
@@ -924,14 +936,14 @@ var Grapheme = (function (exports) {
     try {
       switch (anchor.substr(-1)) {
         case "E":
-          return "E";
+          return "left";
         case "W":
-          return "W";
+          return "right";
         default:
-          return "";
+          return "center";
       }
     } catch (e) {
-      return "";
+      return "center";
     }
   }
 
@@ -968,7 +980,7 @@ var Grapheme = (function (exports) {
   }
 
   // https://stackoverflow.com/a/20439411
-  function beautifyFloat(f, prec=10) {
+  function beautifyFloat(f, prec=15) {
     let strf = f.toFixed(prec);
     if (strf.includes('.')) {
       return strf.replace(/\.?0+$/g,'');
@@ -988,7 +1000,7 @@ var Grapheme = (function (exports) {
         let mantissa = x / (10 ** exponent);
 
         let prefix = (isApproxEqual(mantissa,1) ? '' : (beautifyFloat(mantissa, 8) + CDOT));
-        let exponent_suffix = "10<sup>" + exponent + "</sup>";
+        let exponent_suffix = "10" + exponentify(exponent);
 
         return prefix + exponent_suffix;
       }
@@ -1007,14 +1019,16 @@ var Grapheme = (function (exports) {
         labels: {
           x: {
             display: true,
-            class: "grapheme-bl",
+            font: "bold 15px Helvetica",
+            color: "#000000",
             align: "SW", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
             location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
           },
           y: {
             display: true,
-            class: "grapheme-bl",
+            font: "bold 15px Helvetica",
+            color: "#000000",
             align: "SW", // corner/side on which to align the y label
             location: "dynamic" // can be axis, left, right, or dynamic (switches between)
           }
@@ -1029,14 +1043,16 @@ var Grapheme = (function (exports) {
         labels: {
           x: {
             display: true,
-            class: "grapheme-nl-x",
+            font: "14px Helvetica",
+            color: "#000000",
             align: "SE", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
             location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
           },
           y: {
             display: true,
-            class: "grapheme-nl-y",
+            font: "14px Helvetica",
+            color: "#000000",
             align: "W", // corner/side on which to align the y label
             location: "dynamic"
           }
@@ -1050,15 +1066,17 @@ var Grapheme = (function (exports) {
         label_function: "default",
         labels: {
           x: {
-            display: true,
-            class: "grapheme-ll-x",
+            display: false,
+            font: "10px Helvetica",
+            color: "#333333",
             align: "S", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
             location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
           },
           y: {
             display: true,
-            class: "grapheme-ll-y",
+            font: "8px Helvetica",
+            color: "#333333",
             align: "W", // corner/side on which to align the y label
             location: "dynamic"
           }
@@ -1142,8 +1160,10 @@ var Grapheme = (function (exports) {
         let true_yt_spacing = true_yn_spacing / y_denom;
 
         // precomputed for brevity
-        let minx = this.context.minX(), miny = this.context.minY();
-        let maxx = this.context.maxX(), maxy = this.context.maxY();
+        let minx = this.context.minX();
+        let miny = this.context.minY();
+        let maxx = this.context.maxX();
+        let maxy = this.context.maxY();
 
         if (this.thin.display) {
           // Thin lines
@@ -1167,7 +1187,8 @@ var Grapheme = (function (exports) {
                   bl: getTextBaseline(label.align), // baseline
                   ta: getTextAlign(label.align), // textalign
                   lpos: label.location,
-                  class: label.class
+                  font: label.font,
+                  lcol: label.color
                 });
               }
               this.gridlines.push(gridline);
@@ -1195,7 +1216,8 @@ var Grapheme = (function (exports) {
                   bl: getTextBaseline(label.align), // baseline
                   ta: getTextAlign(label.align), // textalign
                   lpos: label.location,
-                  class: label.class
+                  font: label.font,
+                  lcol: label.color
                 });
               }
               this.gridlines.push(gridline);
@@ -1219,7 +1241,8 @@ var Grapheme = (function (exports) {
               bl: getTextBaseline(labelx.align), // baseline
               ta: getTextAlign(labelx.align), // textalign
               lpos: labelx.location,
-              class: labelx.class
+              font: labelx.font,
+              lcol: labelx.color
             });
           }
           this.gridlines.push(gridline);
@@ -1238,23 +1261,20 @@ var Grapheme = (function (exports) {
               bl: getTextBaseline(labely.align), // baseline
               ta: getTextAlign(labely.align), // textalign
               lpos: labely.location,
-              class: labely.class
+              font: labely.font,
+              lcol: labely.color
             });
           }
           this.gridlines.push(gridline);
         }
 
         this.gridlines.splice(this.gridline_limit);
-
-        return false;
       }
-
-      return true;
     }
 
     draw(info) {
-      if (!this.updateAutoGridlines())
-        this.drawFancy();
+      this.updateAutoGridlines();
+      super.draw(info);
     }
   }
 

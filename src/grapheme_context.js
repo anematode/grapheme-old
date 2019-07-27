@@ -25,13 +25,21 @@ class GraphemeContext {
 
     this.canvas = document.createElement("canvas");
     this.container_div.appendChild(this.canvas);
+    this.text_canvas = document.createElement("canvas");
+    this.container_div.appendChild(this.text_canvas);
+
+    this.canvas.classList.add("grapheme-canvas");
+    this.text_canvas.classList.add("grapheme-text-canvas");
+
     let fancy_div_elem = document.createElement("div");
-    fancy_div_elem.setAttribute("class", "grapheme-fancy-div");
+    fancy_div_elem.classList.add("grapheme-fancy-div");
     this.container_div.append(fancy_div_elem);
 
     this.fancy_div = new FancyDiv(fancy_div_elem);
 
+    this.text_canvas_ctx = this.text_canvas.getContext("2d");
     this.gl = this.canvas.getContext("webgl") || this.canvas.getContext("experimental-webgl");
+
     utils.assert(this.gl, "This browser does not support WebGL, which is required by Grapheme");
 
     this.elements = [];
@@ -123,8 +131,8 @@ class GraphemeContext {
   resizeCanvas() {
     let boundingRect = this.container_div.getBoundingClientRect();
 
-    this.cWidth = this.canvas.width = devicePixelRatio * boundingRect.width;
-    this.cHeight = this.canvas.height = devicePixelRatio * boundingRect.height;
+    this.cWidth = this.canvas.width = this.text_canvas.width = devicePixelRatio * boundingRect.width;
+    this.cHeight = this.canvas.height = this.text_canvas.height = devicePixelRatio * boundingRect.height;
     this.width = boundingRect.width;
     this.height = boundingRect.height;
 
@@ -140,6 +148,8 @@ class GraphemeContext {
 
     // set all colors to the COLOR_CLEAR_VALUE
     gl.clear(gl.COLOR_BUFFER_BIT);
+
+    this.text_canvas_ctx.clearRect(0, 0, this.width, this.height);
   }
 
   pixelToCartesian(x,y) {
