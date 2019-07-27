@@ -1,0 +1,33 @@
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0px;
+  border: 0;
+  overflow: hidden;
+  display: block;
+}
+
+.outer-div {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.grapheme-canvas {
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.grapheme-fancy-div {
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  z-index: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
+}

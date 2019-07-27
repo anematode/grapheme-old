@@ -1,15 +1,16 @@
 import * as utils from './utils';
 
 class ContextElement {
-  constructor(context, params={}) {
-    this.context = context;
+  constructor(grapheme_context, params={}) {
+    this.context = grapheme_context;
 
-    this.precedence = utils.select(params.precedence, 1);
     this.id = utils.getID();
+    this.precedence = utils.select(params.precedence, 1);
     this.display = utils.select(params.display, true);
+    this.lastDrawn = -1;
   }
 
-  draw(canvas, canvas_ctx, info) {
+  draw(info) {
     this.lastDrawn = Date.now();
   }
 }

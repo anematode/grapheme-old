@@ -6,10 +6,6 @@ class Context {
     this.canvas = params.normal_canvas canvas;
     this.canvas_ctx = canvas.getContext('2d');
 
-    this.elements = [];
-
-    // x is of the center, y is of the center, width is the total width, height is the total height
-    this.viewport = {x: 0, y: 0, width: 1, height: 1};
   }
 
   get width() {
