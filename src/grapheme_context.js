@@ -131,8 +131,11 @@ class GraphemeContext {
   resizeCanvas() {
     let boundingRect = this.container_div.getBoundingClientRect();
 
+    this.css_width = boundingRect.width;
+    this.css_height = boundingRect.height;
     this.width = this.canvas.width = this.text_canvas.width = devicePixelRatio * boundingRect.width;
     this.height = this.canvas.height = this.text_canvas.height = devicePixelRatio * boundingRect.height;
+    this.text_canvas_ctx.scale(devicePixelRatio, devicePixelRatio);
 
     // set the GL viewport to the whole canvas
     this.gl.viewport(0, 0, this.width, this.height);
@@ -151,13 +154,13 @@ class GraphemeContext {
   }
 
   pixelToCartesian(x,y) {
-    return {x: (x / this.width - 0.5) * this.viewport.width + this.viewport.x,
-      y: -(y / this.height - 0.5) * this.viewport.height + this.viewport.y};
+    return {x: (x / this.css_width - 0.5) * this.viewport.width + this.viewport.x,
+      y: -(y / this.css_height - 0.5) * this.viewport.height + this.viewport.y};
   }
 
   pixelToCartesianFloatArray(arr) {
-    let w = this.width, vw = this.viewport.width, vx = this.viewport.x;
-    let h = this.height, vh = this.viewport.height, vy = this.viewport.y;
+    let w = this.css_width, vw = this.viewport.width, vx = this.viewport.x;
+    let h = this.css_height, vh = this.viewport.height, vy = this.viewport.y;
 
     for (let i = 0; i < arr.length; i += 2) {
       arr[i] = (arr[i] / w - 0.5) * vw + vx;
@@ -168,13 +171,13 @@ class GraphemeContext {
   }
 
   cartesianToPixel(x,y) {
-    return {x: this.width * ((x - this.viewport.x) / this.viewport.width + 0.5),
-      y: this.height * (-(y - this.viewport.y) / this.viewport.height + 0.5)};
+    return {x: this.css_width * ((x - this.viewport.x) / this.viewport.width + 0.5),
+      y: this.css_height * (-(y - this.viewport.y) / this.viewport.height + 0.5)};
   }
 
   cartesianToPixelFloatArray(arr) {
-    let w = this.width, vw = this.viewport.width, vx = this.viewport.x;
-    let h = this.height, vh = this.viewport.height, vy = this.viewport.y;
+    let w = this.css_width, vw = this.viewport.width, vx = this.viewport.x;
+    let h = this.css_height, vh = this.viewport.height, vy = this.viewport.y;
 
     for (let i = 0; i < arr.length; i += 2) {
       arr[i] = w * ((arr[i] - vx) / vw + 0.5);
@@ -185,11 +188,11 @@ class GraphemeContext {
   }
 
   pixelToCartesianX(x) {
-    return (x / this.width - 0.5) * this.viewport.width + this.viewport.x;
+    return (x / this.css_width - 0.5) * this.viewport.width + this.viewport.x;
   }
 
   pixelToCartesianXFloatArray(arr) {
-    let w = this.width, vw = this.viewport.width, vx = this.viewport.x;
+    let w = this.css_width, vw = this.viewport.width, vx = this.viewport.x;
 
     for (let i = 0; i < arr.length; ++i) {
       arr[i] = (arr[i] / w - 0.5) * vw + vx;
@@ -199,11 +202,11 @@ class GraphemeContext {
   }
 
   cartesianToPixelX(x) {
-    return this.width * ((x - this.viewport.x) / this.viewport.width + 0.5);
+    return this.css_width * ((x - this.viewport.x) / this.viewport.width + 0.5);
   }
 
   cartesianToPixelXFloatArray(arr) {
-    let w = this.width, vw = this.viewport.width, vx = this.viewport.x;
+    let w = this.css_width, vw = this.viewport.width, vx = this.viewport.x;
 
     for (let i = 0; i < arr.length; ++i) {
       arr[i] = w * ((arr[i] - vx) / vw + 0.5);
@@ -213,11 +216,11 @@ class GraphemeContext {
   }
 
   pixelToCartesianY(y) {
-    return -(y / this.height - 0.5) * this.viewport.height + this.viewport.y;
+    return -(y / this.css_height - 0.5) * this.viewport.height + this.viewport.y;
   }
 
   pixelToCartesianYFloatArray(arr) {
-    let h = this.height, vh = this.viewport.height, vy = this.viewport.y;
+    let h = this.css_height, vh = this.viewport.height, vy = this.viewport.y;
 
     for (let i = 0; i < arr.length; ++i) {
       arr[i] = -(arr[i] / h - 0.5) * vh + vy;
@@ -227,7 +230,7 @@ class GraphemeContext {
   }
 
   cartesianToPixelY(y) {
-    return this.height * (-(y - this.viewport.y) / this.viewport.height + 0.5);
+    return this.css_height * (-(y - this.viewport.y) / this.viewport.height + 0.5);
   }
 
   cartesianToCartesianYFloatArray(arr) {
@@ -241,12 +244,12 @@ class GraphemeContext {
   }
 
   cartesianToPixelV(x,y) {
-    return {x: this.width * x / this.viewport.width, y: -this.height * y / this.viewport.height};
+    return {x: this.css_width * x / this.viewport.width, y: -this.height * y / this.viewport.height};
   }
 
   cartesianToPixelVFloatArray(arr) {
-    let wr = this.width / this.viewport.width;
-    let hr = -this.height / this.viewport.height;
+    let wr = this.css_width / this.viewport.width;
+    let hr = -this.css_height / this.viewport.height;
 
     for (let i = 0; i < arr.length; i += 2) {
       arr[i] = wr * arr[i];
@@ -257,12 +260,12 @@ class GraphemeContext {
   }
 
   pixelToCartesianV(x,y) {
-    return {x: this.viewport.width * x / this.width, y: -this.viewport.height * y / this.height};
+    return {x: this.viewport.width * x / this.css_width, y: -this.viewport.height * y / this.css_height};
   }
 
   pixelToCartesianVFloatArray(arr) {
-    let wrp = this.viewport.width / this.width;
-    let hrp = -this.viewport.height / this.height;
+    let wrp = this.viewport.width / this.css_width;
+    let hrp = -this.viewport.height / this.css_height;
 
     for (let i = 0; i < arr.length; i += 2) {
       arr[i] = wrp * arr[i];
@@ -273,11 +276,11 @@ class GraphemeContext {
   }
 
   cartesianToPixelVX(x) {
-    return this.width * x / this.viewport.width;
+    return this.css_width * x / this.viewport.width;
   }
 
   cartesianToPixelVXFloatArray(arr) {
-    let wr = this.width / this.viewport.width;
+    let wr = this.css_width / this.viewport.width;
 
     for (let i = 0; i < arr.length; i++) {
       arr[i] = wr * arr[i];
@@ -287,11 +290,11 @@ class GraphemeContext {
   }
 
   cartesianToPixelVY(y) {
-    return -this.height * y / this.viewport.height;
+    return -this.css_height * y / this.viewport.height;
   }
 
   cartesianToPixelVYFloatArray(y) {
-    let hr = -this.height / this.viewport.height;
+    let hr = -this.css_height / this.viewport.height;
 
     for (let i = 0; i < arr.length; i++) {
       arr[i] = hr * arr[i];
@@ -301,11 +304,11 @@ class GraphemeContext {
   }
 
   pixelToCartesianVX(x) {
-    return this.viewport.width * x / this.width;
+    return this.viewport.width * x / this.css_width;
   }
 
   pixelToCartesianVXFloatArray(arr) {
-    let wrp = this.viewport.width / this.width;
+    let wrp = this.viewport.width / this.css_width;
 
     for (let i = 0; i < arr.length; i++) {
       arr[i] = wrp * arr[i];
@@ -315,11 +318,11 @@ class GraphemeContext {
   }
 
   pixelToCartesianVY(y) {
-    return -this.viewport.height * y / this.height;
+    return -this.viewport.height * y / this.css_height;
   }
 
   pixelToCartesianVYFloatArray(arr) {
-    let hrp = -this.viewport.height / this.height;
+    let hrp = -this.viewport.height / this.css_height;
 
     for (let i = 0; i < arr.length; i++) {
       arr[i] = hrp * arr[i];

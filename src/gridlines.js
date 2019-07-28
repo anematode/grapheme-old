@@ -227,7 +227,7 @@ class Gridlines extends ContextElement {
                   textBaseline = "top";
                   break;
                 case "bottom":
-                  y_draw_pos = this.context.height;
+                  y_draw_pos = this.context.css_height;
                   textBaseline = "bottom";
                   break;
                 case "axis":
@@ -238,7 +238,7 @@ class Gridlines extends ContextElement {
                     y_draw_pos = 0;
                     textBaseline = "top";
                   } else if (0 < minY) { // put label at bottom of canvas
-                    y_draw_pos = this.context.height;
+                    y_draw_pos = this.context.css_height;
                     textBaseline = "bottom";
                   } else {
                     y_draw_pos = this.context.cartesianToPixelY(0);
@@ -260,7 +260,7 @@ class Gridlines extends ContextElement {
                   textAlign = "left";
                   break;
                 case "right":
-                  x_draw_pos = this.context.width;
+                  x_draw_pos = this.context.css_width;
                   textAlign = "right";
                   break;
                 case "axis":
@@ -268,7 +268,7 @@ class Gridlines extends ContextElement {
                   break;
                 case "dynamic":
                   if (0 > maxX) { // put label at the right of the canvas
-                    x_draw_pos = this.context.width;
+                    x_draw_pos = this.context.css_width;
                     textAlign = "right";
                   } else if (0 < minX) { // put label at left of canvas
                     x_draw_pos = 0;
