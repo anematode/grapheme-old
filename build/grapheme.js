@@ -777,13 +777,20 @@ var Grapheme = (function (exports) {
 
       this.listeners = {
         "mousedown": evt => this._mouseDown(evt),
-        "mouseup": evt => this._mouseUp(evt),
-        "mousemove": evt => this._mouseMove(evt),
         "wheel": evt => this._onScroll(evt)
       };
 
       for (let key in this.listeners) {
         this.container_div.addEventListener(key, this.listeners[key]);
+      }
+
+      this.window_listeners = {
+        "mouseup": evt => this._mouseUp(evt),
+        "mousemove": evt => this._mouseMove(evt)
+      };
+
+      for (let key in this.window_listeners) {
+        window.addEventListener(key, this.window_listeners[key]);
       }
     }
 
@@ -793,6 +800,10 @@ var Grapheme = (function (exports) {
       for (let key in this.listeners) {
         this.container_div.removeEventListener(key, this.listeners[key]);
         delete this.listeners[key];
+      }
+
+      for (let key in this.window_listeners) {
+        this.window.removeEventListener(key, this.window_listeners[key]);
       }
     }
 
