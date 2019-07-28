@@ -363,7 +363,7 @@ function exponentify(integer) {
 }
 
 // https://stackoverflow.com/a/20439411
-function beautifyFloat(f, prec=15) {
+function beautifyFloat(f, prec=12) {
   let strf = f.toFixed(prec);
   if (strf.includes('.')) {
     return strf.replace(/\.?0+$/g,'');
@@ -405,15 +405,15 @@ class AutoGridlines extends Gridlines {
     super(context, params);
 
     this.bold = utils.mergeDeep({
-      thickness: 1.3, // Thickness of the axes lines
-      color: 0xffffffff, // Color of the axes lines
+      thickness: 1.4, // Thickness of the axes lines
+      color: 0x000000ff, // Color of the axes lines
       display: true, // Whether to display the axis lines
       label_function: "default",
       labels: {
         x: {
           display: true,
           font: "bold 15px Helvetica",
-          color: "#fff",
+          color: "#000",
           align: "SW", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
           location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
@@ -421,7 +421,7 @@ class AutoGridlines extends Gridlines {
         y: {
           display: true,
           font: "bold 15px Helvetica",
-          color: "#fff",
+          color: "#000",
           align: "SW", // corner/side on which to align the y label
           location: "dynamic" // can be axis, left, right, or dynamic (switches between)
         }
@@ -429,7 +429,7 @@ class AutoGridlines extends Gridlines {
     }, params.bold);
     this.normal = utils.mergeDeep({
       thickness: 0.8, // Thickness of the normal lines
-      color: 0xffffffff, // Color of the normal lines
+      color: 0x000000ff, // Color of the normal lines
       ideal_dist: 140, // ideal distance between lines in pixels
       display: true, // whether to display the lines
       label_function: "default",
@@ -437,7 +437,7 @@ class AutoGridlines extends Gridlines {
         x: {
           display: true,
           font: "14px Helvetica",
-          color: "#eee",
+          color: "#000",
           align: "SE", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
           location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
@@ -445,15 +445,15 @@ class AutoGridlines extends Gridlines {
         y: {
           display: true,
           font: "14px Helvetica",
-          color: "#eee",
+          color: "#000",
           align: "W", // corner/side on which to align the y label
           location: "dynamic"
         }
       }
     }, params.normal);
     this.thin = utils.mergeDeep({
-      thickness: 0.2, // Thickness of the finer demarcations
-      color: 0xffffffff, // Color of the finer demarcations
+      thickness: 0.5, // Thickness of the finer demarcations
+      color: 0x777777ff, // Color of the finer demarcations
       ideal_dist: 50, // ideal distance between lines in pixels
       display: true, // whether to display them
       label_function: "default",
@@ -461,7 +461,7 @@ class AutoGridlines extends Gridlines {
         x: {
           display: false,
           font: "10px Helvetica",
-          color: "#bbb",
+          color: "#000",
           align: "S", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
           location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
@@ -469,7 +469,7 @@ class AutoGridlines extends Gridlines {
         y: {
           display: true,
           font: "8px Helvetica",
-          color: "#bbb",
+          color: "#000",
           align: "W", // corner/side on which to align the y label
           location: "dynamic"
         }
@@ -501,12 +501,13 @@ class AutoGridlines extends Gridlines {
 
       this.old_vp = {...this.context.viewport};
       this.gridlines = {};
-      let that = this; // bruh
 
+      let that = this; // bruh
       let gridline_count = 0;
+
       function addGridline(gridline) {
         if (++gridline_count > that.gridline_limit)
-          throw new Error("Too many gridlines");
+          return ("Too many gridlines");
         let color = gridline.color || DEFAULT_COLOR;
         if (that.gridlines[color]) {
           that.gridlines[color].push(gridline);

@@ -48,7 +48,7 @@ class GraphemeContext {
     this.viewport = {x: 0, y: 0, width: 1, height: 1};
 
     // 0 <= r,g,b <= 255, 0 <= a <= 1 please!
-    this.clear_color = {r: 5, g: 5, b: 5, a: 0.95};
+    this.clear_color = {r: 255, g: 255, b: 255, a: 0.95};
 
     this._addResizeEventListeners();
   }

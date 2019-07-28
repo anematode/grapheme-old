@@ -77,7 +77,7 @@ class InteractiveContext extends GraphemeContext {
     let coords = getMouseOnCanvas(this.canvas, evt);
     let cartesian_coords = this.pixelToCartesian(coords.x, coords.y);
 
-    let scale_factor = Math.abs(Math.pow(this.scrollSpeed, evt.deltaY / 100));
+    let scale_factor = Math.abs(Math.pow(this.scrollSpeed, evt.deltaY / 1000));
 
     // We want coords to be fixed
     this.viewport.height *= scale_factor;

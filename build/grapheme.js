@@ -358,7 +358,7 @@ var Grapheme = (function (exports) {
       this.viewport = {x: 0, y: 0, width: 1, height: 1};
 
       // 0 <= r,g,b <= 255, 0 <= a <= 1 please!
-      this.clear_color = {r: 5, g: 5, b: 5, a: 0.95};
+      this.clear_color = {r: 255, g: 255, b: 255, a: 0.95};
 
       this._addResizeEventListeners();
     }
@@ -832,7 +832,7 @@ var Grapheme = (function (exports) {
       let coords = getMouseOnCanvas(this.canvas, evt);
       let cartesian_coords = this.pixelToCartesian(coords.x, coords.y);
 
-      let scale_factor = Math.abs(Math.pow(this.scrollSpeed, evt.deltaY / 100));
+      let scale_factor = Math.abs(Math.pow(this.scrollSpeed, evt.deltaY / 1000));
 
       // We want coords to be fixed
       this.viewport.height *= scale_factor;
@@ -1207,7 +1207,7 @@ void main() {
   }
 
   // https://stackoverflow.com/a/20439411
-  function beautifyFloat(f, prec=15) {
+  function beautifyFloat(f, prec=12) {
     let strf = f.toFixed(prec);
     if (strf.includes('.')) {
       return strf.replace(/\.?0+$/g,'');
@@ -1245,15 +1245,15 @@ void main() {
       super(context, params);
 
       this.bold = mergeDeep({
-        thickness: 1.3, // Thickness of the axes lines
-        color: 0xffffffff, // Color of the axes lines
+        thickness: 1.4, // Thickness of the axes lines
+        color: 0x000000ff, // Color of the axes lines
         display: true, // Whether to display the axis lines
         label_function: "default",
         labels: {
           x: {
             display: true,
             font: "bold 15px Helvetica",
-            color: "#fff",
+            color: "#000",
             align: "SW", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
             location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
@@ -1261,7 +1261,7 @@ void main() {
           y: {
             display: true,
             font: "bold 15px Helvetica",
-            color: "#fff",
+            color: "#000",
             align: "SW", // corner/side on which to align the y label
             location: "dynamic" // can be axis, left, right, or dynamic (switches between)
           }
@@ -1269,7 +1269,7 @@ void main() {
       }, params.bold);
       this.normal = mergeDeep({
         thickness: 0.8, // Thickness of the normal lines
-        color: 0xffffffff, // Color of the normal lines
+        color: 0x000000ff, // Color of the normal lines
         ideal_dist: 140, // ideal distance between lines in pixels
         display: true, // whether to display the lines
         label_function: "default",
@@ -1277,7 +1277,7 @@ void main() {
           x: {
             display: true,
             font: "14px Helvetica",
-            color: "#eee",
+            color: "#000",
             align: "SE", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
             location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
@@ -1285,15 +1285,15 @@ void main() {
           y: {
             display: true,
             font: "14px Helvetica",
-            color: "#eee",
+            color: "#000",
             align: "W", // corner/side on which to align the y label
             location: "dynamic"
           }
         }
       }, params.normal);
       this.thin = mergeDeep({
-        thickness: 0.2, // Thickness of the finer demarcations
-        color: 0xffffffff, // Color of the finer demarcations
+        thickness: 0.5, // Thickness of the finer demarcations
+        color: 0x777777ff, // Color of the finer demarcations
         ideal_dist: 50, // ideal distance between lines in pixels
         display: true, // whether to display them
         label_function: "default",
@@ -1301,7 +1301,7 @@ void main() {
           x: {
             display: false,
             font: "10px Helvetica",
-            color: "#bbb",
+            color: "#000",
             align: "S", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
             location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
@@ -1309,7 +1309,7 @@ void main() {
           y: {
             display: true,
             font: "8px Helvetica",
-            color: "#bbb",
+            color: "#000",
             align: "W", // corner/side on which to align the y label
             location: "dynamic"
           }
@@ -1341,12 +1341,13 @@ void main() {
 
         this.old_vp = {...this.context.viewport};
         this.gridlines = {};
-        let that = this; // bruh
 
+        let that = this; // bruh
         let gridline_count = 0;
+
         function addGridline(gridline) {
           if (++gridline_count > that.gridline_limit)
-            throw new Error("Too many gridlines");
+            return ("Too many gridlines");
           let color = gridline.color || DEFAULT_COLOR;
           if (that.gridlines[color]) {
             that.gridlines[color].push(gridline);
