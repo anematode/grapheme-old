@@ -112,7 +112,7 @@ class Gridlines extends ContextElement {
       // ... fill up the vertices float32array with triangles corresponding to those lines
       for (let i = 0; i < gridl_subset.length; ++i) {
         let gridline = gridl_subset[i];
-        let thickness_d = gridline.pen / 2;
+        let thickness_d = gridline.pen * utils.dpr / 2;
 
 
         switch (gridline.dir) {
@@ -522,7 +522,7 @@ class AutoGridlines extends Gridlines {
         }
       }
 
-      let ideal_xy = this.context.pixelToCartesianV(this.normal.ideal_dist / utils.dpr, this.normal.ideal_dist / utils.dpr);
+      let ideal_xy = this.context.pixelToCartesianV(this.normal.ideal_dist, this.normal.ideal_dist);
 
       // unpack the values
       let ideal_x_normal_spacing = Math.abs(ideal_xy.x);
@@ -534,8 +534,8 @@ class AutoGridlines extends Gridlines {
       let true_xn_spacing = 10 ** Math.round(Math.log10(ideal_x_normal_spacing));
       let true_yn_spacing = 10 ** Math.round(Math.log10(ideal_y_normal_spacing));
 
-      let ideal_x_thin_spacing_denom = this.context.cartesianToPixelVX(true_xn_spacing) / this.thin.ideal_dist * utils.dpr;
-      let ideal_y_thin_spacing_denom = -this.context.cartesianToPixelVY(true_yn_spacing) / this.thin.ideal_dist * utils.dpr;
+      let ideal_x_thin_spacing_denom = this.context.cartesianToPixelVX(true_xn_spacing) / this.thin.ideal_dist;
+      let ideal_y_thin_spacing_denom = -this.context.cartesianToPixelVY(true_yn_spacing) / this.thin.ideal_dist;
 
       // alias for brevity
       let tspt = this.thin_spacing_types;
@@ -602,7 +602,7 @@ class AutoGridlines extends Gridlines {
                 bl: getTextBaseline(label.align), // baseline
                 ta: getTextAlign(label.align), // textalign
                 lpos: label.location,
-                font: `${label.font_size / utils.dpr}px ${label.font}`,
+                font: `${label.font_size}px ${label.font}`,
                 lcol: label.color
               });
             }
@@ -631,7 +631,7 @@ class AutoGridlines extends Gridlines {
                 bl: getTextBaseline(label.align), // baseline
                 ta: getTextAlign(label.align), // textalign
                 lpos: label.location,
-                font: `${label.font_size / utils.dpr}px ${label.font}`,
+                font: `${label.font_size}px ${label.font}`,
                 lcol: label.color
               });
             }
@@ -656,7 +656,7 @@ class AutoGridlines extends Gridlines {
             bl: getTextBaseline(labelx.align), // baseline
             ta: getTextAlign(labelx.align), // textalign
             lpos: labelx.location,
-            font: `${labelx.font_size / utils.dpr}px ${labelx.font}`,
+            font: `${labelx.font_size}px ${labelx.font}`,
             lcol: labelx.color
           });
         }
@@ -676,7 +676,7 @@ class AutoGridlines extends Gridlines {
             bl: getTextBaseline(labely.align), // baseline
             ta: getTextAlign(labely.align), // textalign
             lpos: labely.location,
-            font: `${labely.font_size / utils.dpr}px ${labely.font}`,
+            font: `${labely.font_size}px ${labely.font}`,
             lcol: labely.color
           });
         }
