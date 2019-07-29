@@ -472,7 +472,7 @@ var Grapheme = (function (exports) {
       // set all colors to the COLOR_CLEAR_VALUE
       gl.clear(gl.COLOR_BUFFER_BIT);
 
-      this.text_canvas_ctx.clearRect(0, 0, this.width, this.height);
+      this.text_canvas_ctx.clearRect(0, 0, this.css_width, this.css_height);
     }
 
     pixelToCartesian(x,y) {
@@ -983,7 +983,7 @@ void main() {
         // ... fill up the vertices float32array with triangles corresponding to those lines
         for (let i = 0; i < gridl_subset.length; ++i) {
           let gridline = gridl_subset[i];
-          let thickness_d = gridline.pen / 2;
+          let thickness_d = gridline.pen * dpr / 2;
 
 
           switch (gridline.dir) {
@@ -1057,9 +1057,6 @@ void main() {
       let currentTextBaseline = "";
       let currentTextAlignment = "";
       let currentFontColor = "";
-
-      ctx.font = "15px Helvetica";
-      ctx.fillStyle = "#000000";
 
       let maxY = this.context.maxY();
       let maxX = this.context.maxX();
@@ -1279,8 +1276,7 @@ void main() {
         labels: {
           x: {
             display: true,
-            font: "bold Helvetica",
-            font_size: 14,
+            font: "bold 14px Helvetica",
             color: "#000",
             align: "SW", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
@@ -1288,8 +1284,7 @@ void main() {
           },
           y: {
             display: true,
-            font: "bold Helvetica",
-            font_size: 14,
+            font: "bold 14px Helvetica",
             color: "#000",
             align: "SW", // corner/side on which to align the y label
             location: "dynamic" // can be axis, left, right, or dynamic (switches between)
@@ -1305,8 +1300,7 @@ void main() {
         labels: {
           x: {
             display: true,
-            font: "Helvetica",
-            font_size: 12,
+            font: "12px Helvetica",
             color: "#000",
             align: "SE", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
@@ -1314,8 +1308,7 @@ void main() {
           },
           y: {
             display: true,
-            font: "Helvetica",
-            font_size: 12,
+            font: "12px Helvetica",
             color: "#000",
             align: "W", // corner/side on which to align the y label
             location: "dynamic"
@@ -1331,8 +1324,7 @@ void main() {
         labels: {
           x: {
             display: false,
-            font: "Helvetica",
-            font_size: 8,
+            font: "8px Helvetica",
             color: "#000",
             align: "S", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
@@ -1340,8 +1332,7 @@ void main() {
           },
           y: {
             display: true,
-            font: "Helvetica",
-            font_size: 8,
+            font: "8px Helvetica",
             color: "#000",
             align: "W", // corner/side on which to align the y label
             location: "dynamic"
@@ -1389,7 +1380,7 @@ void main() {
           }
         }
 
-        let ideal_xy = this.context.pixelToCartesianV(this.normal.ideal_dist / dpr, this.normal.ideal_dist / dpr);
+        let ideal_xy = this.context.pixelToCartesianV(this.normal.ideal_dist, this.normal.ideal_dist);
 
         // unpack the values
         let ideal_x_normal_spacing = Math.abs(ideal_xy.x);
@@ -1401,8 +1392,8 @@ void main() {
         let true_xn_spacing = 10 ** Math.round(Math.log10(ideal_x_normal_spacing));
         let true_yn_spacing = 10 ** Math.round(Math.log10(ideal_y_normal_spacing));
 
-        let ideal_x_thin_spacing_denom = this.context.cartesianToPixelVX(true_xn_spacing) / this.thin.ideal_dist * dpr;
-        let ideal_y_thin_spacing_denom = -this.context.cartesianToPixelVY(true_yn_spacing) / this.thin.ideal_dist * dpr;
+        let ideal_x_thin_spacing_denom = this.context.cartesianToPixelVX(true_xn_spacing) / this.thin.ideal_dist;
+        let ideal_y_thin_spacing_denom = -this.context.cartesianToPixelVY(true_yn_spacing) / this.thin.ideal_dist;
 
         // alias for brevity
         let tspt = this.thin_spacing_types;
@@ -1469,7 +1460,7 @@ void main() {
                   bl: getTextBaseline(label.align), // baseline
                   ta: getTextAlign(label.align), // textalign
                   lpos: label.location,
-                  font: `${label.font_size / dpr}px ${label.font}`,
+                  font: label.font,
                   lcol: label.color
                 });
               }
@@ -1498,7 +1489,7 @@ void main() {
                   bl: getTextBaseline(label.align), // baseline
                   ta: getTextAlign(label.align), // textalign
                   lpos: label.location,
-                  font: `${label.font_size / dpr}px ${label.font}`,
+                  font: label.font,
                   lcol: label.color
                 });
               }
@@ -1523,7 +1514,7 @@ void main() {
               bl: getTextBaseline(labelx.align), // baseline
               ta: getTextAlign(labelx.align), // textalign
               lpos: labelx.location,
-              font: `${labelx.font_size / dpr}px ${labelx.font}`,
+              font: labelx.font,
               lcol: labelx.color
             });
           }
@@ -1543,7 +1534,7 @@ void main() {
               bl: getTextBaseline(labely.align), // baseline
               ta: getTextAlign(labely.align), // textalign
               lpos: labely.location,
-              font: `${labely.font_size / dpr}px ${labely.font}`,
+              font: labely.font,
               lcol: labely.color
             });
           }

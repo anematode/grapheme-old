@@ -187,9 +187,6 @@ class Gridlines extends ContextElement {
     let currentTextAlignment = "";
     let currentFontColor = "";
 
-    ctx.font = "15px Helvetica";
-    ctx.fillStyle = "#000000";
-
     let maxY = this.context.maxY();
     let maxX = this.context.maxX();
     let minY = this.context.minY();
@@ -412,8 +409,7 @@ class AutoGridlines extends Gridlines {
       labels: {
         x: {
           display: true,
-          font: "bold Helvetica",
-          font_size: 14,
+          font: "bold 14px Helvetica",
           color: "#000",
           align: "SW", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
@@ -421,8 +417,7 @@ class AutoGridlines extends Gridlines {
         },
         y: {
           display: true,
-          font: "bold Helvetica",
-          font_size: 14,
+          font: "bold 14px Helvetica",
           color: "#000",
           align: "SW", // corner/side on which to align the y label
           location: "dynamic" // can be axis, left, right, or dynamic (switches between)
@@ -438,8 +433,7 @@ class AutoGridlines extends Gridlines {
       labels: {
         x: {
           display: true,
-          font: "Helvetica",
-          font_size: 12,
+          font: "12px Helvetica",
           color: "#000",
           align: "SE", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
@@ -447,8 +441,7 @@ class AutoGridlines extends Gridlines {
         },
         y: {
           display: true,
-          font: "Helvetica",
-          font_size: 12,
+          font: "12px Helvetica",
           color: "#000",
           align: "W", // corner/side on which to align the y label
           location: "dynamic"
@@ -464,8 +457,7 @@ class AutoGridlines extends Gridlines {
       labels: {
         x: {
           display: false,
-          font: "Helvetica",
-          font_size: 8,
+          font: "8px Helvetica",
           color: "#000",
           align: "S", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
@@ -473,8 +465,7 @@ class AutoGridlines extends Gridlines {
         },
         y: {
           display: true,
-          font: "Helvetica",
-          font_size: 8,
+          font: "8px Helvetica",
           color: "#000",
           align: "W", // corner/side on which to align the y label
           location: "dynamic"
@@ -602,7 +593,7 @@ class AutoGridlines extends Gridlines {
                 bl: getTextBaseline(label.align), // baseline
                 ta: getTextAlign(label.align), // textalign
                 lpos: label.location,
-                font: `${label.font_size}px ${label.font}`,
+                font: label.font,
                 lcol: label.color
               });
             }
@@ -631,7 +622,7 @@ class AutoGridlines extends Gridlines {
                 bl: getTextBaseline(label.align), // baseline
                 ta: getTextAlign(label.align), // textalign
                 lpos: label.location,
-                font: `${label.font_size}px ${label.font}`,
+                font: label.font,
                 lcol: label.color
               });
             }
@@ -656,7 +647,7 @@ class AutoGridlines extends Gridlines {
             bl: getTextBaseline(labelx.align), // baseline
             ta: getTextAlign(labelx.align), // textalign
             lpos: labelx.location,
-            font: `${labelx.font_size}px ${labelx.font}`,
+            font: labelx.font,
             lcol: labelx.color
           });
         }
@@ -676,7 +667,7 @@ class AutoGridlines extends Gridlines {
             bl: getTextBaseline(labely.align), // baseline
             ta: getTextAlign(labely.align), // textalign
             lpos: labely.location,
-            font: `${labely.font_size}px ${labely.font}`,
+            font: labely.font,
             lcol: labely.color
           });
         }

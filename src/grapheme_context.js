@@ -152,7 +152,7 @@ class GraphemeContext {
     // set all colors to the COLOR_CLEAR_VALUE
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    this.text_canvas_ctx.clearRect(0, 0, this.width, this.height);
+    this.text_canvas_ctx.clearRect(0, 0, this.css_width, this.css_height);
   }
 
   pixelToCartesian(x,y) {
