@@ -290,7 +290,24 @@ class Gridlines extends ContextElement {
             currentTextAlignment = ctx.textAlign = textAlign;
           }
 
-          ctx.fillText(gridline.label, labelX, labelY);
+          let padX = 0, padY = 0;
+          switch (textBaseline) {
+            case "bottom":
+              padY = -2;
+              break;
+            case "top":
+              padY = 2;
+          }
+
+          switch (textAlign) {
+            case "left":
+              padX = 2;
+              break;
+            case "right":
+              padX = -2;
+          }
+
+          ctx.fillText(gridline.label, labelX + padX, labelY + padY);
         }
       }
     }
@@ -373,6 +390,18 @@ function compareViewports(vp1, vp2) {
   return (vp1.x === vp2.x) && (vp1.y === vp2.y) && (vp1.width === vp2.width) && (vp1.height === vp2.height);
 }
 
+function findNearestValueIndex(arr, val) {
+  let closest = arr[0];
+
+  for (let i = 1; i < arr.length; ++i) {
+    if (Math.abs(arr[i] - val) < Math.abs(closest - val)) {
+      return i;
+    }
+  }
+
+  return 0;
+}
+
 let CDOT = String.fromCharCode(183);
 
 const LABEL_FUNCTIONS = {
@@ -409,24 +438,26 @@ class AutoGridlines extends Gridlines {
       labels: {
         x: {
           display: true,
-          font: "bold 14px Helvetica",
+          font: "12px Helvetica",
           color: "#000",
           align: "SW", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
+          padding: 2, // how much padding in that alignment direction
           location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
         },
         y: {
           display: true,
-          font: "bold 14px Helvetica",
+          font: "12px Helvetica",
           color: "#000",
           align: "SW", // corner/side on which to align the y label
+          padding: 2, // how much padding in that alignment direction
           location: "dynamic" // can be axis, left, right, or dynamic (switches between)
         }
       }
     }, params.bold);
     this.normal = utils.mergeDeep({
       thickness: 0.8, // Thickness of the normal lines
-      color: 0x000000ff, // Color of the normal lines
+      color: 0x000000aa, // Color of the normal lines
       ideal_dist: 140, // ideal distance between lines in pixels
       display: true, // whether to display the lines
       label_function: "default",
@@ -435,8 +466,9 @@ class AutoGridlines extends Gridlines {
           display: true,
           font: "12px Helvetica",
           color: "#000",
-          align: "SE", // corner/side on which to align the x label,
+          align: "S", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
+          padding: 2,
           location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
         },
         y: {
@@ -444,13 +476,14 @@ class AutoGridlines extends Gridlines {
           font: "12px Helvetica",
           color: "#000",
           align: "W", // corner/side on which to align the y label
+          padding: 2,
           location: "dynamic"
         }
       }
     }, params.normal);
     this.thin = utils.mergeDeep({
       thickness: 0.5, // Thickness of the finer demarcations
-      color: 0x777777ff, // Color of the finer demarcations
+      color: 0x00000088, // Color of the finer demarcations
       ideal_dist: 50, // ideal distance between lines in pixels
       display: true, // whether to display them
       label_function: "default",
@@ -461,20 +494,22 @@ class AutoGridlines extends Gridlines {
           color: "#000",
           align: "S", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
+          padding: 2,
           location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
         },
         y: {
-          display: true,
+          display: false,
           font: "8px Helvetica",
           color: "#000",
           align: "W", // corner/side on which to align the y label
+          padding: 2,
           location: "dynamic"
         }
       }
     }, params.thin);
 
     // Types of finer demarcation subdivisions: default is subdivide into 2, into 5, and into 10
-    this.thin_spacing_types = utils.select(params.thin_spacing_types, [4, 5, 10]);
+    this.subdivisions = utils.select(params.subdivisions, [[2, [4]], [5, [5, 10]], [4, [4, 8]]])
     // Maximum number of displayed grid lines
     this.gridline_limit = utils.select(params.gridline_limit, 500);
     // force equal thin subdivisions in x and y directions
@@ -522,29 +557,46 @@ class AutoGridlines extends Gridlines {
       // (This might happen if the ideal inter-thin distance is negative)
       let ideal_y_normal_spacing = Math.abs(ideal_xy.y);
 
-      let true_xn_spacing = 10 ** Math.round(Math.log10(ideal_x_normal_spacing));
-      let true_yn_spacing = 10 ** Math.round(Math.log10(ideal_y_normal_spacing));
+      let ixns_log10 = Math.log10(ideal_x_normal_spacing);
+      let iyns_log10 = Math.log10(ideal_y_normal_spacing);
+
+      let possible_coeffs = this.subdivisions.map(x => x[0]);
+
+      let ixns_base = 10 ** Math.floor(ixns_log10);
+      let ixns_coeff_i = findNearestValueIndex(possible_coeffs, ideal_x_normal_spacing / ixns_base);
+
+      let iyns_base = 10 ** Math.floor(iyns_log10);
+      let iyns_coeff_i = findNearestValueIndex(possible_coeffs, ideal_y_normal_spacing / ixns_base);
+
+      let true_xn_spacing = this.subdivisions[ixns_coeff_i][0] * ixns_base;
+      let true_yn_spacing = this.subdivisions[iyns_coeff_i][0] * iyns_base;
 
       let ideal_x_thin_spacing_denom = this.context.cartesianToPixelVX(true_xn_spacing) / this.thin.ideal_dist;
       let ideal_y_thin_spacing_denom = -this.context.cartesianToPixelVY(true_yn_spacing) / this.thin.ideal_dist;
 
       // alias for brevity
-      let tspt = this.thin_spacing_types;
+      let tspt_x = this.subdivisions[ixns_coeff_i][1];
+      let tspt_y = this.subdivisions[iyns_coeff_i][1];
 
       // temp values
-      let x_denom = tspt[0];
-      let y_denom = tspt[0];
+      let x_denom = tspt_x[0];
+      let y_denom = tspt_y[0];
 
       // go through all potential thin spacing types
-      for (let i = 0; i < tspt.length; ++i) {
-        let possible_denom = tspt[i];
+      for (let i = 0; i < tspt_x.length; ++i) {
+        let possible_denom = tspt_x[i];
 
         // if this is more ideal of an x subdivision, use that!
         if (Math.abs(possible_denom - ideal_x_thin_spacing_denom) <
           Math.abs(x_denom - ideal_x_thin_spacing_denom)) {
           x_denom = possible_denom;
         }
+      }
 
+      for (let i = 0; i < tspt_y.length; ++i) {
+        let possible_denom = tspt_y[i];
+
+        // if this is more ideal of an y subdivision, use that!
         if (Math.abs(possible_denom - ideal_y_thin_spacing_denom) <
           Math.abs(y_denom - ideal_y_thin_spacing_denom)) {
           y_denom = possible_denom;
@@ -594,7 +646,8 @@ class AutoGridlines extends Gridlines {
                 ta: getTextAlign(label.align), // textalign
                 lpos: label.location,
                 font: label.font,
-                lcol: label.color
+                lcol: label.color,
+                pad: label.padding
               });
             }
             addGridline(gridline);
@@ -623,7 +676,8 @@ class AutoGridlines extends Gridlines {
                 ta: getTextAlign(label.align), // textalign
                 lpos: label.location,
                 font: label.font,
-                lcol: label.color
+                lcol: label.color,
+                pad: label.padding
               });
             }
             addGridline(gridline);
@@ -648,7 +702,8 @@ class AutoGridlines extends Gridlines {
             ta: getTextAlign(labelx.align), // textalign
             lpos: labelx.location,
             font: labelx.font,
-            lcol: labelx.color
+            lcol: labelx.color,
+            pad: labelx.padding
           });
         }
         addGridline(gridline);
@@ -668,7 +723,8 @@ class AutoGridlines extends Gridlines {
             ta: getTextAlign(labely.align), // textalign
             lpos: labely.location,
             font: labely.font,
-            lcol: labely.color
+            lcol: labely.color,
+            pad: labely.padding
           });
         }
         addGridline(gridline);
