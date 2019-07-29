@@ -156,7 +156,17 @@ var Grapheme = (function (exports) {
     }
   }
 
+  let dpr = window.devicePixelRatio;
+
+  function updateDPR() {
+    dpr = window.devicePixelRatio;
+  }
+
+  let _updateDPRinterval = setInterval(updateDPR);
+
   var utils = /*#__PURE__*/Object.freeze({
+    _updateDPRinterval: _updateDPRinterval,
+    get dpr () { return dpr; },
     select: select,
     getID: getID,
     assert: assert,
@@ -441,8 +451,13 @@ var Grapheme = (function (exports) {
     resizeCanvas() {
       let boundingRect = this.container_div.getBoundingClientRect();
 
-      this.width = this.canvas.width = this.text_canvas.width = devicePixelRatio * boundingRect.width;
-      this.height = this.canvas.height = this.text_canvas.height = devicePixelRatio * boundingRect.height;
+      this.css_width = boundingRect.width;
+      this.css_height = boundingRect.height;
+      this.width = this.canvas.width = this.text_canvas.width =
+        Math.floor(devicePixelRatio * boundingRect.width);
+      this.height = this.canvas.height = this.text_canvas.height =
+        Math.floor(devicePixelRatio * boundingRect.height);
+      this.text_canvas_ctx.scale(devicePixelRatio, devicePixelRatio);
 
       // set the GL viewport to the whole canvas
       this.gl.viewport(0, 0, this.width, this.height);
@@ -461,13 +476,13 @@ var Grapheme = (function (exports) {
     }
 
     pixelToCartesian(x,y) {
-      return {x: (x / this.width - 0.5) * this.viewport.width + this.viewport.x,
-        y: -(y / this.height - 0.5) * this.viewport.height + this.viewport.y};
+      return {x: (x / this.css_width - 0.5) * this.viewport.width + this.viewport.x,
+        y: -(y / this.css_height - 0.5) * this.viewport.height + this.viewport.y};
     }
 
     pixelToCartesianFloatArray(arr) {
-      let w = this.width, vw = this.viewport.width, vx = this.viewport.x;
-      let h = this.height, vh = this.viewport.height, vy = this.viewport.y;
+      let w = this.css_width, vw = this.viewport.width, vx = this.viewport.x;
+      let h = this.css_height, vh = this.viewport.height, vy = this.viewport.y;
 
       for (let i = 0; i < arr.length; i += 2) {
         arr[i] = (arr[i] / w - 0.5) * vw + vx;
@@ -478,13 +493,13 @@ var Grapheme = (function (exports) {
     }
 
     cartesianToPixel(x,y) {
-      return {x: this.width * ((x - this.viewport.x) / this.viewport.width + 0.5),
-        y: this.height * (-(y - this.viewport.y) / this.viewport.height + 0.5)};
+      return {x: this.css_width * ((x - this.viewport.x) / this.viewport.width + 0.5),
+        y: this.css_height * (-(y - this.viewport.y) / this.viewport.height + 0.5)};
     }
 
     cartesianToPixelFloatArray(arr) {
-      let w = this.width, vw = this.viewport.width, vx = this.viewport.x;
-      let h = this.height, vh = this.viewport.height, vy = this.viewport.y;
+      let w = this.css_width, vw = this.viewport.width, vx = this.viewport.x;
+      let h = this.css_height, vh = this.viewport.height, vy = this.viewport.y;
 
       for (let i = 0; i < arr.length; i += 2) {
         arr[i] = w * ((arr[i] - vx) / vw + 0.5);
@@ -495,11 +510,11 @@ var Grapheme = (function (exports) {
     }
 
     pixelToCartesianX(x) {
-      return (x / this.width - 0.5) * this.viewport.width + this.viewport.x;
+      return (x / this.css_width - 0.5) * this.viewport.width + this.viewport.x;
     }
 
     pixelToCartesianXFloatArray(arr) {
-      let w = this.width, vw = this.viewport.width, vx = this.viewport.x;
+      let w = this.css_width, vw = this.viewport.width, vx = this.viewport.x;
 
       for (let i = 0; i < arr.length; ++i) {
         arr[i] = (arr[i] / w - 0.5) * vw + vx;
@@ -509,11 +524,11 @@ var Grapheme = (function (exports) {
     }
 
     cartesianToPixelX(x) {
-      return this.width * ((x - this.viewport.x) / this.viewport.width + 0.5);
+      return this.css_width * ((x - this.viewport.x) / this.viewport.width + 0.5);
     }
 
     cartesianToPixelXFloatArray(arr) {
-      let w = this.width, vw = this.viewport.width, vx = this.viewport.x;
+      let w = this.css_width, vw = this.viewport.width, vx = this.viewport.x;
 
       for (let i = 0; i < arr.length; ++i) {
         arr[i] = w * ((arr[i] - vx) / vw + 0.5);
@@ -523,11 +538,11 @@ var Grapheme = (function (exports) {
     }
 
     pixelToCartesianY(y) {
-      return -(y / this.height - 0.5) * this.viewport.height + this.viewport.y;
+      return -(y / this.css_height - 0.5) * this.viewport.height + this.viewport.y;
     }
 
     pixelToCartesianYFloatArray(arr) {
-      let h = this.height, vh = this.viewport.height, vy = this.viewport.y;
+      let h = this.css_height, vh = this.viewport.height, vy = this.viewport.y;
 
       for (let i = 0; i < arr.length; ++i) {
         arr[i] = -(arr[i] / h - 0.5) * vh + vy;
@@ -537,7 +552,7 @@ var Grapheme = (function (exports) {
     }
 
     cartesianToPixelY(y) {
-      return this.height * (-(y - this.viewport.y) / this.viewport.height + 0.5);
+      return this.css_height * (-(y - this.viewport.y) / this.viewport.height + 0.5);
     }
 
     cartesianToCartesianYFloatArray(arr) {
@@ -551,12 +566,12 @@ var Grapheme = (function (exports) {
     }
 
     cartesianToPixelV(x,y) {
-      return {x: this.width * x / this.viewport.width, y: -this.height * y / this.viewport.height};
+      return {x: this.css_width * x / this.viewport.width, y: -this.height * y / this.viewport.height};
     }
 
     cartesianToPixelVFloatArray(arr) {
-      let wr = this.width / this.viewport.width;
-      let hr = -this.height / this.viewport.height;
+      let wr = this.css_width / this.viewport.width;
+      let hr = -this.css_height / this.viewport.height;
 
       for (let i = 0; i < arr.length; i += 2) {
         arr[i] = wr * arr[i];
@@ -567,12 +582,12 @@ var Grapheme = (function (exports) {
     }
 
     pixelToCartesianV(x,y) {
-      return {x: this.viewport.width * x / this.width, y: -this.viewport.height * y / this.height};
+      return {x: this.viewport.width * x / this.css_width, y: -this.viewport.height * y / this.css_height};
     }
 
     pixelToCartesianVFloatArray(arr) {
-      let wrp = this.viewport.width / this.width;
-      let hrp = -this.viewport.height / this.height;
+      let wrp = this.viewport.width / this.css_width;
+      let hrp = -this.viewport.height / this.css_height;
 
       for (let i = 0; i < arr.length; i += 2) {
         arr[i] = wrp * arr[i];
@@ -583,11 +598,11 @@ var Grapheme = (function (exports) {
     }
 
     cartesianToPixelVX(x) {
-      return this.width * x / this.viewport.width;
+      return this.css_width * x / this.viewport.width;
     }
 
     cartesianToPixelVXFloatArray(arr) {
-      let wr = this.width / this.viewport.width;
+      let wr = this.css_width / this.viewport.width;
 
       for (let i = 0; i < arr.length; i++) {
         arr[i] = wr * arr[i];
@@ -597,11 +612,11 @@ var Grapheme = (function (exports) {
     }
 
     cartesianToPixelVY(y) {
-      return -this.height * y / this.viewport.height;
+      return -this.css_height * y / this.viewport.height;
     }
 
     cartesianToPixelVYFloatArray(y) {
-      let hr = -this.height / this.viewport.height;
+      let hr = -this.css_height / this.viewport.height;
 
       for (let i = 0; i < arr.length; i++) {
         arr[i] = hr * arr[i];
@@ -611,11 +626,11 @@ var Grapheme = (function (exports) {
     }
 
     pixelToCartesianVX(x) {
-      return this.viewport.width * x / this.width;
+      return this.viewport.width * x / this.css_width;
     }
 
     pixelToCartesianVXFloatArray(arr) {
-      let wrp = this.viewport.width / this.width;
+      let wrp = this.viewport.width / this.css_width;
 
       for (let i = 0; i < arr.length; i++) {
         arr[i] = wrp * arr[i];
@@ -625,11 +640,11 @@ var Grapheme = (function (exports) {
     }
 
     pixelToCartesianVY(y) {
-      return -this.viewport.height * y / this.height;
+      return -this.viewport.height * y / this.css_height;
     }
 
     pixelToCartesianVYFloatArray(arr) {
-      let hrp = -this.viewport.height / this.height;
+      let hrp = -this.viewport.height / this.css_height;
 
       for (let i = 0; i < arr.length; i++) {
         arr[i] = hrp * arr[i];
@@ -758,7 +773,8 @@ var Grapheme = (function (exports) {
 
   function getMouseOnCanvas(canvas, evt) {
     let rect = canvas.getBoundingClientRect();
-    return {x: evt.clientX - rect.left, y: evt.clientY - rect.top};
+
+    return {x: (evt.clientX - rect.left), y: (evt.clientY - rect.top)};
   }
 
   class InteractiveContext extends GraphemeContext {
@@ -1082,7 +1098,7 @@ void main() {
                     textBaseline = "top";
                     break;
                   case "bottom":
-                    y_draw_pos = this.context.height;
+                    y_draw_pos = this.context.css_height;
                     textBaseline = "bottom";
                     break;
                   case "axis":
@@ -1093,7 +1109,7 @@ void main() {
                       y_draw_pos = 0;
                       textBaseline = "top";
                     } else if (0 < minY) { // put label at bottom of canvas
-                      y_draw_pos = this.context.height;
+                      y_draw_pos = this.context.css_height;
                       textBaseline = "bottom";
                     } else {
                       y_draw_pos = this.context.cartesianToPixelY(0);
@@ -1115,7 +1131,7 @@ void main() {
                     textAlign = "left";
                     break;
                   case "right":
-                    x_draw_pos = this.context.width;
+                    x_draw_pos = this.context.css_width;
                     textAlign = "right";
                     break;
                   case "axis":
@@ -1123,7 +1139,7 @@ void main() {
                     break;
                   case "dynamic":
                     if (0 > maxX) { // put label at the right of the canvas
-                      x_draw_pos = this.context.width;
+                      x_draw_pos = this.context.css_width;
                       textAlign = "right";
                     } else if (0 < minX) { // put label at left of canvas
                       x_draw_pos = 0;
@@ -1263,7 +1279,8 @@ void main() {
         labels: {
           x: {
             display: true,
-            font: "bold 15px Helvetica",
+            font: "bold Helvetica",
+            font_size: 14,
             color: "#000",
             align: "SW", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
@@ -1271,7 +1288,8 @@ void main() {
           },
           y: {
             display: true,
-            font: "bold 15px Helvetica",
+            font: "bold Helvetica",
+            font_size: 14,
             color: "#000",
             align: "SW", // corner/side on which to align the y label
             location: "dynamic" // can be axis, left, right, or dynamic (switches between)
@@ -1287,7 +1305,8 @@ void main() {
         labels: {
           x: {
             display: true,
-            font: "14px Helvetica",
+            font: "Helvetica",
+            font_size: 12,
             color: "#000",
             align: "SE", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
@@ -1295,7 +1314,8 @@ void main() {
           },
           y: {
             display: true,
-            font: "14px Helvetica",
+            font: "Helvetica",
+            font_size: 12,
             color: "#000",
             align: "W", // corner/side on which to align the y label
             location: "dynamic"
@@ -1311,7 +1331,8 @@ void main() {
         labels: {
           x: {
             display: false,
-            font: "10px Helvetica",
+            font: "Helvetica",
+            font_size: 8,
             color: "#000",
             align: "S", // corner/side on which to align the x label,
                          // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
@@ -1319,7 +1340,8 @@ void main() {
           },
           y: {
             display: true,
-            font: "8px Helvetica",
+            font: "Helvetica",
+            font_size: 8,
             color: "#000",
             align: "W", // corner/side on which to align the y label
             location: "dynamic"
@@ -1367,7 +1389,7 @@ void main() {
           }
         }
 
-        let ideal_xy = this.context.pixelToCartesianV(this.normal.ideal_dist, this.normal.ideal_dist);
+        let ideal_xy = this.context.pixelToCartesianV(this.normal.ideal_dist / dpr, this.normal.ideal_dist / dpr);
 
         // unpack the values
         let ideal_x_normal_spacing = Math.abs(ideal_xy.x);
@@ -1379,8 +1401,8 @@ void main() {
         let true_xn_spacing = 10 ** Math.round(Math.log10(ideal_x_normal_spacing));
         let true_yn_spacing = 10 ** Math.round(Math.log10(ideal_y_normal_spacing));
 
-        let ideal_x_thin_spacing_denom = this.context.cartesianToPixelVX(true_xn_spacing) / this.thin.ideal_dist;
-        let ideal_y_thin_spacing_denom = -this.context.cartesianToPixelVY(true_yn_spacing) / this.thin.ideal_dist;
+        let ideal_x_thin_spacing_denom = this.context.cartesianToPixelVX(true_xn_spacing) / this.thin.ideal_dist * dpr;
+        let ideal_y_thin_spacing_denom = -this.context.cartesianToPixelVY(true_yn_spacing) / this.thin.ideal_dist * dpr;
 
         // alias for brevity
         let tspt = this.thin_spacing_types;
@@ -1447,7 +1469,7 @@ void main() {
                   bl: getTextBaseline(label.align), // baseline
                   ta: getTextAlign(label.align), // textalign
                   lpos: label.location,
-                  font: label.font,
+                  font: `${label.font_size / dpr}px ${label.font}`,
                   lcol: label.color
                 });
               }
@@ -1476,7 +1498,7 @@ void main() {
                   bl: getTextBaseline(label.align), // baseline
                   ta: getTextAlign(label.align), // textalign
                   lpos: label.location,
-                  font: label.font,
+                  font: `${label.font_size / dpr}px ${label.font}`,
                   lcol: label.color
                 });
               }
@@ -1501,7 +1523,7 @@ void main() {
               bl: getTextBaseline(labelx.align), // baseline
               ta: getTextAlign(labelx.align), // textalign
               lpos: labelx.location,
-              font: labelx.font,
+              font: `${labelx.font_size / dpr}px ${labelx.font}`,
               lcol: labelx.color
             });
           }
@@ -1521,7 +1543,7 @@ void main() {
               bl: getTextBaseline(labely.align), // baseline
               ta: getTextAlign(labely.align), // textalign
               lpos: labely.location,
-              font: labely.font,
+              font: `${labely.font_size / dpr}px ${labely.font}`,
               lcol: labely.color
             });
           }

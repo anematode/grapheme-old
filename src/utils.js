@@ -155,5 +155,13 @@ function createGLProgram(gl, vertShader, fragShader) {
   }
 }
 
-export { select, getID, assert, checkType, deepEquals, roundToCanvasCoord, _ctxDrawPath, isInteger, isNonnegativeInteger,
+let dpr = window.devicePixelRatio;
+
+function updateDPR() {
+  dpr = window.devicePixelRatio;
+}
+
+let _updateDPRinterval = setInterval(updateDPR);
+
+export { _updateDPRinterval, dpr, select, getID, assert, checkType, deepEquals, roundToCanvasCoord, _ctxDrawPath, isInteger, isNonnegativeInteger,
 isNonpositiveInteger, isNegativeInteger, isPositiveInteger, mergeDeep, isApproxEqual, createShaderFromSource, createGLProgram};

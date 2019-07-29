@@ -3,7 +3,8 @@ import * as utils from './utils';
 
 function getMouseOnCanvas(canvas, evt) {
   let rect = canvas.getBoundingClientRect();
-  return {x: evt.clientX - rect.left, y: evt.clientY - rect.top};
+
+  return {x: (evt.clientX - rect.left), y: (evt.clientY - rect.top)};
 }
 
 class InteractiveContext extends GraphemeContext {
