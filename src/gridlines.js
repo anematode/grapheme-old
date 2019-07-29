@@ -1,6 +1,7 @@
 import * as utils from "./utils";
 import {ContextElement} from "./context_element";
 
+// this vertex shader is used for the gridlines
 const vertexShaderSource = `
 // set the float precision of the shader to medium precision
 precision mediump float;
@@ -12,6 +13,7 @@ void main() {
   gl_Position = vec4(v_position, 0, 1);
 }`;
 
+// this frag shader is used for the gridlines
 const fragmentShaderSource = `
 // set the float precision of the shader to medium precision
 precision mediump float;
@@ -23,53 +25,116 @@ void main() {
 }
 `;
 
+/*
+This is a general gridlines class that can be used to draw a series of gridlines
+in the x and y directions, which take up the whole screen. These gridlines can
+be labeled on the sides of the screen, on the axis only, or in dynamic mode,
+where the labeling position is chosen based on whether the axis is visible and
+the relative position of the axis on the screen.
+
+This class is designed to have derived classes which implement the actual
+positioning of the gridlines; this class does not do that and can only *draw*
+the gridlines it's told to draw. If you want a pre-built gridlines creator, use
+Grapheme.AutoGridlines, which has its own separate set of parameters.
+
+PROPERTIES
+----------
+gridlines: This is an object of key-value pairs (as a Pythonista I'd call it a
+dictionary) which contains the list of gridlines to render. It is not modified
+by this class. The keys are the colors of the lines, stored in the format
+#rrggbbaa; in other words, a 32-bit hexadecimal number containing red, green,
+blue, and opacity values from 0 to 255 (sorry Pro Display XDR users). The values
+are arrays of "gridlines", which have the following properties:
+
+  color: color of the label; pen: thickness of the label in pixels; dir:
+  direction of the gridline, in the sense of which axis it demarcates; pos:
+  the position of the gridline along that Cartesian axis; label: the text of the
+  label on that gridlines; bl: the baseline of the text to be drawn; ta: the
+  text alignment of the text to be drawn; lpos: the position of the label
+  relative to the axis, either "left", "right" (for y) or "top", "bottom" (for
+  x) and always "axis" and "dynamic"; font: the font of the label; lcol: the
+  color of the label, as a string; pad: padding in pixels in the direction of
+  alignment.
+
+max_render_gridlines: if you try to render more than this many gridlines, it
+will just return early. The default is 1000, which should be plenty, unless your
+display is the size of a wall. DO NOT CHANGE THIS AFTER INITIALIZATION.
+
+gridline_vertices: You should never have to touch this; this is a Float32Array
+which contains the actual vertices of the triangles (that's right, triangles)
+comprising the actual gridlines drawn by WebGL.
+
+vertex_position_buf: You should never have to touch this; this is a WebGL buffer
+object which contains the gridlines drawn by WebGL.
+
+label_eclipse_width: parameter allowing you to change the width of the stroke
+around the label text which stops it from intersecting with the gridlines.
+
+label_eclipse_style: width of the aforementioned stroke
+
+METHODS
+----------
+constructor(context, params={}): as any ContextElement, takes in a
+Grapheme.Context and a list of parameters. The only parameters used by this class
+is max_render_gridlines, label_eclipse_width, and label_eclipse_style.
+
+_getGridlinesShaderProgram(void): an internal function used to compile the
+program on a per-Grapheme.Context basis, since it would be wasteful to compile
+one WebGL program for each set of gridlines... but why would you do have two
+set of gridlines on a single Context anyway??
+
+_gridlinesShaderColorLoc(void): used internally to get the color attribute
+
+_gridlinesShaderVertexLoc(void): used internally to get the vertex location
+
+drawLines(void): draw the gridlines in the WebGL canvas
+
+draw(void): draw everything: text boxes and the gridlines
+*/
 class Gridlines extends ContextElement {
   constructor(context, params={}) {
     super(context, params);
 
-    this.orientation = utils.select(params.orientation);
-
-    // gridlines is a dictionary of coordinates (in coordinate space), whether it's
-    // x axis or y axis, and the line thickness,
-    // label text (if desired), lpos ('l','r')
-    // the key is the line color
-    // example gridline:
-    // {dir: 'x', pos: 0.8, pen: 0.5, label: "0.8", lpos: 'l'', font: "15px Helvetica"}
-    // example overall structure: "{r: 255, g: 100, b: 30, a: 0.5} : [], {...} : []"
     this.gridlines = {};
 
-    // maximum number of gridlines that can be RENDERED
     this.max_render_gridlines = params.max_gridlines || 1000;
-    // float 32 array of gridline vertices (as triangles)
+
     this.gridline_vertices = new Float32Array(this.max_render_gridlines * 12);
-    // GL buffer containing our vertices (later)
+
     this.vertex_position_buf = this.context.gl.createBuffer();
+
+    // the width of the thin border around the text
+    this.label_eclipse_width = utils.select(params.label_eclipse_width, 4);
+    // the style of the thin border around the text
+    this.label_eclipse_style = utils.select(params.label_eclipse_style, "white");
   }
 
   _getGridlinesShaderProgram() {
+    // if we already have a gridlines shader for this context, use it!
     if (this.context._gridlinesShader)
       return this.context._gridlinesShader;
 
     let gl = this.context.gl;
 
-    // create the vertex shader.
+    // create the vertex shader
     let vertShad = utils.createShaderFromSource(gl /* rendering context */,
       gl.VERTEX_SHADER /* enum for vertex shader type */,
       vertexShaderSource /* source of the vertex shader*/ );
 
-    // create the frag shader.
+    // create the frag shader
     let fragShad = utils.createShaderFromSource(gl /* rendering context */,
       gl.FRAGMENT_SHADER /* enum for vertex shader type */,
       fragmentShaderSource /* source of the vertex shader*/ );
 
-    // create the program
+    // create the program. we set _gridlinesShader in the parent Context so that
+    // any future gridlines in this Context will use the already-compiled shader
     let program = this.context._gridlinesShader = utils.createGLProgram(gl, vertShad, fragShad);
 
     // get the location of the vec4 in the program to set the color
     this.context._gridlinesShaderColorLoc = gl.getUniformLocation(program, "line_color");
 
     // get the location of the vertex array in the program
-    this.context._gridlinesShaderVertexLocation = gl.getAttribLocation(program, "v_position");
+    this.context._gridlinesShaderVertexLoc = gl.getAttribLocation(program, "v_position");
 
     return program;
   }
@@ -78,21 +143,21 @@ class Gridlines extends ContextElement {
     return this.context._gridlinesShaderColorLoc;
   }
 
-  _gridlinesShaderVertexLocation() {
-    return this.context._gridlinesShaderVertexLocation;
+  _gridlinesShaderVertexLoc() {
+    return this.context._gridlinesShaderVertexLoc;
   }
 
   drawLines() {
-    let gl = this.context.gl;
+    let gl = this.context.gl; // alias for our WebGL context
 
     let gridlines = this.gridlines;
 
-    let colors = Object.keys(this.gridlines);
+    let colors = Object.keys(gridlines); // list of colors
     let vertices = this.gridline_vertices;
 
     let glProgram = this._getGridlinesShaderProgram();
     let colorLocation = this._gridlinesShaderColorLoc();
-    let verticesLocation = this._gridlinesShaderVertexLocation();
+    let verticesLocation = this._gridlinesShaderVertexLoc();
 
     // tell webgl to start using the gridline program
     gl.useProgram(glProgram);
@@ -100,7 +165,7 @@ class Gridlines extends ContextElement {
     // bind our webgl buffer to gl.ARRAY_BUFFER access point
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertex_position_buf);
 
-    let m,y1,y2,x1,x2,delta;
+    let m,y1,y2,x1,x2,delta; // calculation variables
     let width = this.context.width, height = this.context.height;
 
     // for each color...
@@ -143,8 +208,6 @@ class Gridlines extends ContextElement {
         vertices[++vertex_i] = x2;
         vertices[++vertex_i] = y2;
 
-        // console.log(x1,y1,x1,y2,x2,y2)
-
         // Triangle 2
         vertices[++vertex_i] = x1;
         vertices[++vertex_i] = y1;
@@ -178,37 +241,49 @@ class Gridlines extends ContextElement {
 
   draw(info) {
     super.draw(info);
+
+    // draw the WebGL lines (note that this takes the shortest time out of everything)
     this.drawLines();
 
+    // alias for the text canvas context
     let ctx = this.context.text_canvas_ctx;
 
+    // used to prevent repeated value sets to ctx.whatever, which can be laggy
     let currentFont = "";
     let currentTextBaseline = "";
     let currentTextAlignment = "";
     let currentFontColor = "";
 
+    ctx.strokeStyle = this.label_eclipse_style;
+    ctx.lineWidth = this.label_eclipse_width;
+
+    // for brevity
     let maxY = this.context.maxY();
     let maxX = this.context.maxX();
     let minY = this.context.minY();
     let minX = this.context.minX();
 
     let labelX, labelY;
-    let colors = Object.keys(this.gridlines);
+    let colors = Object.keys(this.gridlines); // list of colors
 
+    // for all colors...
     for (let color_i = 0; color_i < colors.length; ++color_i) {
       let arr = this.gridlines[colors[color_i]];
 
+      // for all gridlines...
       for (let i = 0; i < arr.length; ++i) {
         let gridline = arr[i];
 
-        if (gridline.font && gridline.font != currentFont) {
+        if (gridline.font && gridline.font != currentFont) { // update font
           currentFont = ctx.font = gridline.font;
         }
 
+        // update font color
         if (gridline.lcol && gridline.lcol != currentFontColor) {
           currentFontColor = ctx.fillStyle = gridline.lcol;
         }
 
+        // set values for textBaseline and textAlign
         let textBaseline = gridline.bl || "bottom", textAlign = gridline.ta || "left";
 
         switch (gridline.dir) {
@@ -220,23 +295,19 @@ class Gridlines extends ContextElement {
 
               switch (gridline.lpos) { // label position
                 case "top":
-                  y_draw_pos = 0;
-                  textBaseline = "top";
+                  y_draw_pos = 0, textBaseline = "top";
                   break;
                 case "bottom":
-                  y_draw_pos = this.context.css_height;
-                  textBaseline = "bottom";
+                  y_draw_pos = this.context.css_height, textBaseline = "bottom";
                   break;
                 case "axis":
                   y_draw_pos = this.context.cartesianToPixelY(0);
                   break;
                 case "dynamic":
                   if (0 > maxY) { // put label at the top of the canvas
-                    y_draw_pos = 0;
-                    textBaseline = "top";
+                    y_draw_pos = 0, textBaseline = "top";
                   } else if (0 < minY) { // put label at bottom of canvas
-                    y_draw_pos = this.context.css_height;
-                    textBaseline = "bottom";
+                    y_draw_pos = this.context.css_height, textBaseline = "bottom";
                   } else {
                     y_draw_pos = this.context.cartesianToPixelY(0);
                   }
@@ -253,23 +324,19 @@ class Gridlines extends ContextElement {
 
               switch (gridline.lpos) { // label position
                 case "left":
-                  x_draw_pos = 0;
-                  textAlign = "left";
+                  x_draw_pos = 0, textAlign = "left";
                   break;
                 case "right":
-                  x_draw_pos = this.context.css_width;
-                  textAlign = "right";
+                  x_draw_pos = this.context.css_width, textAlign = "right";
                   break;
                 case "axis":
                   x_draw_pos = this.context.cartesianToPixelX(0);
                   break;
                 case "dynamic":
                   if (0 > maxX) { // put label at the right of the canvas
-                    x_draw_pos = this.context.css_width;
-                    textAlign = "right";
+                    x_draw_pos = this.context.css_width, textAlign = "right";
                   } else if (0 < minX) { // put label at left of canvas
-                    x_draw_pos = 0;
-                    textAlign = "left";
+                    x_draw_pos = 0, textAlign = "left";
                   } else {
                     x_draw_pos = this.context.cartesianToPixelX(0);
                   }
@@ -290,21 +357,26 @@ class Gridlines extends ContextElement {
             currentTextAlignment = ctx.textAlign = textAlign;
           }
 
+          // pixel padding
           let padX = 0, padY = 0;
           switch (textBaseline) {
             case "bottom":
-              padY = -2;
+              padY = -gridline.pad;
               break;
             case "top":
-              padY = 2;
+              padY = gridline.pad;
           }
 
           switch (textAlign) {
             case "left":
-              padX = 2;
+              padX = gridline.pad;
               break;
             case "right":
-              padX = -2;
+              padX = -gridline.pad;
+          }
+
+          if (this.label_eclipse_width) {
+            ctx.strokeText(gridline.label, labelX + padX, labelY + padY);
           }
 
           ctx.fillText(gridline.label, labelX + padX, labelY + padY);
@@ -314,6 +386,8 @@ class Gridlines extends ContextElement {
   }
 }
 
+/* Function to get the baseline of an anchor string, e.g. "NW".
+I was inspired by Asymptote on this one, sorry Brandon. */
 function getTextBaseline(anchor) {
   try {
     switch (anchor[0]) {
@@ -329,6 +403,7 @@ function getTextBaseline(anchor) {
   }
 }
 
+/* Same as above, but for getting the text alignment. */
 function getTextAlign(anchor) {
   try {
     switch (anchor.substr(-1)) {
@@ -344,6 +419,7 @@ function getTextAlign(anchor) {
   }
 }
 
+/* Unicode characters for exponent signs, LOL */
 const exponent_reference = {
   '-': String.fromCharCode(8315),
   '0': String.fromCharCode(8304),
@@ -358,16 +434,17 @@ const exponent_reference = {
   '9': String.fromCharCode(8313)
 };
 
+/* Convert a digit into its exponent form */
 function convert_char(c) {
-  let potent = exponent_reference[c];
-  return potent;
+  return exponent_reference[c];
 }
 
+/* Convert an integer into its exponent form (of Unicode characters) */
 function exponentify(integer) {
   utils.assert(utils.isInteger(integer), "needs to be an integer");
+
   let stringi = integer + '';
   let out = '';
-
 
   for (let i = 0; i < stringi.length; ++i) {
     out += convert_char(stringi[i]);
@@ -376,7 +453,8 @@ function exponentify(integer) {
   return out;
 }
 
-// https://stackoverflow.com/a/20439411
+// Credit: https://stackoverflow.com/a/20439411
+/* Turns a float into a pretty float by removing dumb floating point things */
 function beautifyFloat(f, prec=12) {
   let strf = f.toFixed(prec);
   if (strf.includes('.')) {
@@ -386,10 +464,12 @@ function beautifyFloat(f, prec=12) {
   }
 }
 
+// Helper function: used internally to quickly check if the viewport has changed
 function compareViewports(vp1, vp2) {
   return (vp1.x === vp2.x) && (vp1.y === vp2.y) && (vp1.width === vp2.width) && (vp1.height === vp2.height);
 }
 
+// Helper function: Find the nearest value to val in the array arr
 function findNearestValueIndex(arr, val) {
   let closest = arr[0];
 
@@ -402,20 +482,25 @@ function findNearestValueIndex(arr, val) {
   return 0;
 }
 
-let CDOT = String.fromCharCode(183);
+// Multiplication character
+const CDOT = String.fromCharCode(183);
 
+// List of functions to determine how the gridlines are labeled with
+// AutoGridlines. TODO: add more of 'em!
 const LABEL_FUNCTIONS = {
   default: x => {
-    if (x === 0) return "0";
-    else if (Math.abs(x) < 1e5 && Math.abs(x) > 1e-5) return beautifyFloat(x);
+    if (x === 0) return "0"; // special case
+    else if (Math.abs(x) < 1e5 && Math.abs(x) > 1e-5)
+      // non-extreme floats displayed normally
+      return beautifyFloat(x);
     else {
-      // scientific notation
+      // scientific notation for the very fat and very small!
 
-      let sigfigs = 5;
       let exponent = Math.floor(Math.log10(Math.abs(x)));
       let mantissa = x / (10 ** exponent);
 
-      let prefix = (utils.isApproxEqual(mantissa,1) ? '' : (beautifyFloat(mantissa, 8) + CDOT));
+      let prefix = (utils.isApproxEqual(mantissa,1) ? '' :
+        (beautifyFloat(mantissa, 8) + CDOT));
       let exponent_suffix = "10" + exponentify(exponent);
 
       return prefix + exponent_suffix;
@@ -423,9 +508,58 @@ const LABEL_FUNCTIONS = {
   }
 };
 
-const DEFAULT_COLOR = {r: 0, g: 0, b: 0, a: 1};
-const gridline_keys = ["color", "pen", "pos", "label", "bl", "ta", "tpos", "font", "lcol"];
+/* The flagship product of Grapheme as of July 29, 2019. This derived class of
+Gridlines provides an easy way to calculate the gridlines of a view.
 
+There are three types of gridlines: bold (used for the axes), normal (used for
+the major divisions of the coordinate space), and thin (used for finer demarca-
+tions). Each of them can be customized with the following parameters:
+
+thickness: the thickness in pixels of the drawn lines
+color: color of the drawn lines in 0xrrggbbaa format (see Gridlines if confused)
+display: boolean of whether to display these gridlines. Note that the next
+subdivision of gridlines will fill in the gap (except there is no next subdiv.
+for thin gridlines).
+label_function: LABEL_FUNCTIONS[label_function] is given the coordinate of the
+gridline and returns a string representation of what it should be labeled.
+labels: Object containing "x" and "y", for customization of each label.
+  "x" and "y" each have:
+  display: whether to display this label
+  font: the font used by the label
+  color: the color of the label
+  align: the direction (N, NE, NW, E, W, SW, SE, S, C) in which the label is
+  aligned to (so that its opposite corner is at its nominal locatio)
+  padding: the number of pixels it is additionally displaced from its nominal
+  location: "axis", "dynamic", etc. (see Gridlines for an explanation)
+
+Subdivision is done automatically and is customizable with the remaining parameters.
+
+PROPERTIES
+----------
+bold: styling of the bold gridlines, as explained above.
+normal: styling of the normal gridlines, as explained above.
+  normal.ideal_dist: the ideal distance in pixels between normal lines; used
+  when trying to subdivide it in the best way possible
+thin: styling of the thin gridlines, as explained above.
+  thin.ideal_dist: the ideal distance in pixels between thin lines; used when
+  trying to subdivide it in the best way possible
+subdivisions: the possible subdivisions types, expressed as an array of objects
+{normal: x, thin: [a,b,c]}. This means that x * 10^n is a potential normal line
+subdivision, and that the subdivision x/a * 10^n is a potential thin line
+subdivision. THe actual subdivision chosen depends on the viewport, the screen
+size, and normal.ideal_dist/thin.ideal_dist.
+gridline_limit: The maximum number of gridlines it will calculate before it just
+stops.
+force_equal_thin_div: force the division count of thin lines to be equal along
+the x and y directions.
+
+METHODS
+----------
+updateAutoGridlines(void): update the list of internal gridlines to draw stuff
+
+draw(info): draw the gridlines by checking whether the gridlines need to be
+updated, then updating if necessary and then calling the Gridlines draw routine.
+*/
 class AutoGridlines extends Gridlines {
   constructor(context, params={}) {
     super(context, params);
@@ -442,7 +576,7 @@ class AutoGridlines extends Gridlines {
           color: "#000",
           align: "SW", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
-          padding: 2, // how much padding in that alignment direction
+          padding: 4, // how much padding in that alignment direction
           location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
         },
         y: {
@@ -450,7 +584,7 @@ class AutoGridlines extends Gridlines {
           font: "12px Helvetica",
           color: "#000",
           align: "SW", // corner/side on which to align the y label
-          padding: 2, // how much padding in that alignment direction
+          padding: 4, // how much padding in that alignment direction
           location: "dynamic" // can be axis, left, right, or dynamic (switches between)
         }
       }
@@ -468,7 +602,7 @@ class AutoGridlines extends Gridlines {
           color: "#000",
           align: "S", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
-          padding: 2,
+          padding: 4,
           location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
         },
         y: {
@@ -476,7 +610,7 @@ class AutoGridlines extends Gridlines {
           font: "12px Helvetica",
           color: "#000",
           align: "W", // corner/side on which to align the y label
-          padding: 2,
+          padding: 4,
           location: "dynamic"
         }
       }
@@ -494,7 +628,7 @@ class AutoGridlines extends Gridlines {
           color: "#000",
           align: "S", // corner/side on which to align the x label,
                        // note that anything besides N,S,W,E,NW,NE,SW,SE is centered
-          padding: 2,
+          padding: 4,
           location: "dynamic" // can be axis, top, bottom, or dynamic (switches between)
         },
         y: {
@@ -502,36 +636,26 @@ class AutoGridlines extends Gridlines {
           font: "8px Helvetica",
           color: "#000",
           align: "W", // corner/side on which to align the y label
-          padding: 2,
+          padding: 4,
           location: "dynamic"
         }
       }
     }, params.thin);
 
     // Types of finer demarcation subdivisions: default is subdivide into 2, into 5, and into 10
-    this.subdivisions = utils.select(params.subdivisions, [[2, [4]], [5, [5, 10]], [4, [4, 8]]])
+    this.subdivisions = utils.select(params.subdivisions, [
+      {normal: 2, thin: [4]},
+      {normal: 5, thin: [5, 10]},
+      {normal: 4, thin: [4, 8]}
+    ]);
+
     // Maximum number of displayed grid lines
     this.gridline_limit = utils.select(params.gridline_limit, 500);
     // force equal thin subdivisions in x and y directions
     this.force_equal_thin_div = true;
   }
 
-  get thin_spacing_types() {
-    return this._thin_spacing_types;
-  }
-
-  set thin_spacing_types(val) {
-    utils.assert(val.every(utils.isPositiveInteger), "thin_spacing_types need to be positive integers");
-    utils.assert(val[0], "thin_spacing_types needs at least one subdivision");
-
-    this._thin_spacing_types = [...val];
-  }
-
   updateAutoGridlines() {
-    if (!this.old_vp || !compareViewports(this.old_vp, this.context.viewport)) {
-      // only execute if the viewport has changed
-
-      this.old_vp = {...this.context.viewport};
       this.gridlines = {};
 
       let that = this; // bruh
@@ -560,7 +684,7 @@ class AutoGridlines extends Gridlines {
       let ixns_log10 = Math.log10(ideal_x_normal_spacing);
       let iyns_log10 = Math.log10(ideal_y_normal_spacing);
 
-      let possible_coeffs = this.subdivisions.map(x => x[0]);
+      let possible_coeffs = this.subdivisions.map(x => x.normal);
 
       let ixns_base = 10 ** Math.floor(ixns_log10);
       let ixns_coeff_i = findNearestValueIndex(possible_coeffs, ideal_x_normal_spacing / ixns_base);
@@ -568,21 +692,21 @@ class AutoGridlines extends Gridlines {
       let iyns_base = 10 ** Math.floor(iyns_log10);
       let iyns_coeff_i = findNearestValueIndex(possible_coeffs, ideal_y_normal_spacing / ixns_base);
 
-      let true_xn_spacing = this.subdivisions[ixns_coeff_i][0] * ixns_base;
-      let true_yn_spacing = this.subdivisions[iyns_coeff_i][0] * iyns_base;
+      let true_xn_spacing = possible_coeffs[ixns_coeff_i] * ixns_base;
+      let true_yn_spacing = possible_coeffs[iyns_coeff_i] * iyns_base;
 
       let ideal_x_thin_spacing_denom = this.context.cartesianToPixelVX(true_xn_spacing) / this.thin.ideal_dist;
       let ideal_y_thin_spacing_denom = -this.context.cartesianToPixelVY(true_yn_spacing) / this.thin.ideal_dist;
 
       // alias for brevity
-      let tspt_x = this.subdivisions[ixns_coeff_i][1];
-      let tspt_y = this.subdivisions[iyns_coeff_i][1];
+      let tspt_x = this.subdivisions[ixns_coeff_i].thin;
+      let tspt_y = this.subdivisions[iyns_coeff_i].thin;
 
       // temp values
       let x_denom = tspt_x[0];
       let y_denom = tspt_y[0];
 
-      // go through all potential thin spacing types
+      // go through all potential thin spacing types for x
       for (let i = 0; i < tspt_x.length; ++i) {
         let possible_denom = tspt_x[i];
 
@@ -630,7 +754,7 @@ class AutoGridlines extends Gridlines {
         let thiny_start = Math.floor(miny / true_yt_spacing);
         let thiny_end = Math.ceil(maxy / true_yt_spacing);
 
-        // x
+        // both x and y
         for (let i = 0, start = thinx_start, end = thinx_end, dir = 'x', denom = x_denom, spacing = true_xt_spacing; ++i < 3; start = thiny_start, end = thiny_end, dir = 'y', denom = y_denom, spacing = true_yt_spacing) {
           utils.assert(start <= end, "wtf happened");
 
@@ -662,6 +786,7 @@ class AutoGridlines extends Gridlines {
         let normaly_start = Math.floor(miny / true_yn_spacing);
         let normaly_end = Math.ceil(maxy / true_yn_spacing);
 
+        // both x and y
         for (let j = 0, start = normalx_start, end = normalx_end, dir = 'x', spacing = true_xn_spacing;
           ++j < 3;
           start = normaly_start, end = normaly_end, dir = 'y', spacing = true_yn_spacing) {
@@ -685,11 +810,10 @@ class AutoGridlines extends Gridlines {
         }
       }
 
-      // Axis lines (if applicable)
+      // Axis lines (a.k.a. bold lines) (if applicable)
+
       // x
-
       if (this.context.cartesianXInView(0)) {
-
         let gridline = {color: this.bold.color,
           pen: this.bold.thickness,
           dir: 'x',
@@ -706,6 +830,7 @@ class AutoGridlines extends Gridlines {
             pad: labelx.padding
           });
         }
+
         addGridline(gridline);
       }
 
@@ -727,13 +852,19 @@ class AutoGridlines extends Gridlines {
             pad: labely.padding
           });
         }
+
         addGridline(gridline);
       }
-    }
   }
 
   draw(info) {
-    this.updateAutoGridlines();
+    if (!this.old_vp || !compareViewports(this.old_vp, this.context.viewport)) {
+      // only execute if the viewport has changed
+
+      this.old_vp = {...this.context.viewport};
+      this.updateAutoGridlines();
+    }
+
     super.draw(info);
   }
 }
