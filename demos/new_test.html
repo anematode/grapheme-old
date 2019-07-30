@@ -18,6 +18,7 @@ let grapheme_context = new Grapheme.InteractiveContext({
   container_div: document.getElementById("grapheme-container")
 });
 let gridlines = new Grapheme.AutoGridlines(grapheme_context);
+let func = new Grapheme.FunctionalGraph(grapheme_context);
 
 let render = function() {
   grapheme_context.viewport.height = grapheme_context.viewport.width * grapheme_context.height / grapheme_context.width;

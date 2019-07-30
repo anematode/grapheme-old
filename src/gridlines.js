@@ -177,7 +177,6 @@ class Gridlines extends ContextElement {
         let gridline = gridl_subset[i];
         let thickness_d = gridline.pen * utils.dpr / 2;
 
-
         switch (gridline.dir) {
           case 'x':
             m = this.context.cartesianToGLX(gridline.pos);

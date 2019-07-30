@@ -161,7 +161,11 @@ function updateDPR() {
   dpr = window.devicePixelRatio;
 }
 
+let mod = function mod(n, m) {
+  return ((n % m) + m) % m;
+}
+
 let _updateDPRinterval = setInterval(updateDPR);
 
-export { _updateDPRinterval, dpr, select, getID, assert, checkType, deepEquals, roundToCanvasCoord, _ctxDrawPath, isInteger, isNonnegativeInteger,
+export { mod, _updateDPRinterval, dpr, select, getID, assert, checkType, deepEquals, roundToCanvasCoord, _ctxDrawPath, isInteger, isNonnegativeInteger,
 isNonpositiveInteger, isNegativeInteger, isPositiveInteger, mergeDeep, isApproxEqual, createShaderFromSource, createGLProgram};
