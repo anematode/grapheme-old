@@ -2,8 +2,7 @@ import * as utils from "./utils";
 import {ContextElement} from "./context_element";
 
 // this vertex shader is used for the gridlines
-const vertexShaderSource = `
-// set the float precision of the shader to medium precision
+const vertexShaderSource = `// set the float precision of the shader to medium precision
 precision mediump float;
 // a vector containing the 2D position of the vertex
 attribute vec2 v_position;
@@ -14,8 +13,7 @@ void main() {
 }`;
 
 // this frag shader is used for the gridlines
-const fragmentShaderSource = `
-// set the float precision of the shader to medium precision
+const fragmentShaderSource = `// set the float precision of the shader to medium precision
 precision mediump float;
 // vec4 containing the color of the line to be drawn
 uniform vec4 line_color;
@@ -646,7 +644,7 @@ class AutoGridlines extends Gridlines {
     this.subdivisions = utils.select(params.subdivisions, [
       {normal: 2, thin: [4]},
       {normal: 5, thin: [5, 10]},
-      {normal: 4, thin: [4, 8]}
+      {normal: 1, thin: [5]}
     ]);
 
     // Maximum number of displayed grid lines
