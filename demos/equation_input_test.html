@@ -18,5 +18,100 @@
     let eq_inp = document.getElementById("equation_input");
     let eq_container = document.getElementById("eq_container");
 
+    let inp_contents;
+    let latex_contents = "c = \\pm\\sqrt{a^2 + b^2}";
+
+    const TOKEN_PATTERNS = [{
+      type: "space",
+      re: /^ +/
+    }, {
+      type: "op",
+      re: /^[\^\/\*\%\+\-\!]/
+    }, {
+      type: "number",
+      re: /^[0-9]+\.?[0-9]*/
+    }, {
+      type: "comma",
+      re: /^,/
+    }, {
+      type: "bracket_variable",
+      re: /^\[[a-zA-Z0-9_]+\]/
+    }, {
+      type: "variable",
+      re: /^[a-zA-Z][0-9]*/
+    }, {
+      type: "paren",
+      re: /^[\(\)]/
+    }];
+
+    function chew(contents) {
+      if (!contents) return;
+
+      for (let i = 0; i < TOKEN_PATTERNS.length; ++i) {
+        let token_pattern = TOKEN_PATTERNS[i];
+
+        let test_match = contents.match(token_pattern.re);
+        if (test_match) {
+          // There's a match!
+          let str = test_match[0];
+          let len = str.length;
+          let type = token_pattern.type;
+
+          return [{type, str, len}, contents.slice(len)];
+        }
+      }
+
+      return [{type: "unknown", str: contents[0], len: 1}, contents.slice(1)];
+    }
+
+    const MAX_TOKENS = 1000;
+
+    function tokenize(contents) {
+      contents = contents.trim();
+
+      let tokens = [];
+      let i = MAX_TOKENS;
+      let token;
+
+      while (contents && --i) {
+        [token, contents] = chew(contents);
+        tokens.push(token);
+      }
+
+      if (i === 0)
+        throw new Error(`Maximum number of tokens reached (${MAX_TOKENS})`);
+
+      return tokens;
+    }
+
+    function mildly_abstractify(tokens) {
+      // Turns it into a tree format amenable for LaTeX business
+
+      let paren_depth = 0;
+      let tree;
+
+      // Pass one: check whether parentheses are balanced
+      for (let i = 0; i < tokens.length; ++i) {
+        let token = tokens[i];
+
+
+      }
+    }
+
+    function convert(contents) {
+      return contents;
+    }
+
+    eq_inp.oninput = () => {
+      inp_contents = eq_inp.value;
+      console.log(tokenize(inp_contents));
+
+      latex_contents = convert(inp_contents);
+
+      katex.render(latex_contents, eq_container, {throwOnError: false});
+    };
+
+    eq_inp.oninput();
+
   </script>
 </html>
