@@ -2,6 +2,10 @@ import {ContextElement} from "./context_element";
 import {IntervalFunctions as IF} from "./intervals";
 import * as utils from "./utils";
 
+const VERTEX_CALCULATION_MODE_TYPES = {
+
+};
+
 class FunctionalGraph extends ContextElement {
   constructor(context, params={}) {
     super(context, params);
@@ -11,8 +15,8 @@ class FunctionalGraph extends ContextElement {
     this.thickness = utils.select(params.thickness, 3);
 
     this.intended_samples = 1500;
-    this.interval_func = x => IF.MUL(x, IF.ADD(x, IF.CONST(1)));
     this.quick_func = x => x * (x + 1);
+    this.vertex_calculation_mode =
 
     this.max_vertices = 2000;
     this.vertices = new Float64Array(2 * this.max_vertices);

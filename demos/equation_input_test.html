@@ -73,8 +73,12 @@
       let i = MAX_TOKENS;
       let token;
 
+      let str_index = 0;
+
       while (contents && --i) {
         [token, contents] = chew(contents);
+        token.loc = str_index;
+        str_index += token.len;
         tokens.push(token);
       }
 
