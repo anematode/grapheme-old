@@ -168,6 +168,10 @@ var Grapheme = (function (exports) {
 
   let _updateDPRinterval = setInterval(updateDPR);
 
+  function expandVerticesIntoTriangles(thickness = 1, vertices, triangles) {
+
+  }
+
   var utils = /*#__PURE__*/Object.freeze({
     mod: mod,
     _updateDPRinterval: _updateDPRinterval,
@@ -187,6 +191,7 @@ var Grapheme = (function (exports) {
     mergeDeep: mergeDeep,
     isApproxEqual: isApproxEqual,
     createShaderFromSource: createShaderFromSource,
+    expandVerticesIntoTriangles: expandVerticesIntoTriangles,
     createGLProgram: createGLProgram
   });
 
@@ -1923,8 +1928,8 @@ void main() {
       this.thickness = select(params.thickness, 3);
 
       this.intended_samples = 1500;
-      this.interval_func = x => IntervalFunctions.MUL(x, IntervalFunctions.ADD(x, IntervalFunctions.CONST(1)));
       this.quick_func = x => x * (x + 1);
+      this.vertex_calculation_mode = "cow";
 
       this.max_vertices = 2000;
       this.vertices = new Float64Array(2 * this.max_vertices);
@@ -1960,22 +1965,7 @@ void main() {
     }
 
     calculateGLVertices() {
-      let vertices = this.vertices;
-      let vertices_count = this.actual_vertices;
-      let gl_vertices = this.gl_vertices;
-
-      let t1x, px, py;
-
-      for (let i = 0; i < 2 * vertices_count - 2; i += 2) {
-        if (i === 0) {
-          px = vertices[0], py = vertices[1];
-
-          let dx = vertices[2] - vertices[0];
-          let dy = vertices[3] - vertices[1];
-
-          t1x = vertices[2];
-        }
-      }
+      this.actual_gl_vertices = expandVerticesIntoTriangles(this.thickness, this.actual_vertices, this.actual_gl_vertices);
     }
 
     draw() {

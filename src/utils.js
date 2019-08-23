@@ -167,5 +167,9 @@ let mod = function mod(n, m) {
 
 let _updateDPRinterval = setInterval(updateDPR);
 
+function expandVerticesIntoTriangles(thickness = 1, vertices, triangles) {
+
+}
+
 export { mod, _updateDPRinterval, dpr, select, getID, assert, checkType, deepEquals, roundToCanvasCoord, _ctxDrawPath, isInteger, isNonnegativeInteger,
-isNonpositiveInteger, isNegativeInteger, isPositiveInteger, mergeDeep, isApproxEqual, createShaderFromSource, createGLProgram};
+isNonpositiveInteger, isNegativeInteger, isPositiveInteger, mergeDeep, isApproxEqual, createShaderFromSource, expandVerticesIntoTriangles, createGLProgram};
