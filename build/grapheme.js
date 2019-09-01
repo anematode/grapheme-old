@@ -333,6 +333,8 @@ var Grapheme = (function (exports) {
   }
 
   function importGraphemeCSS() {
+    if (window.Grapheme.graphemeCSSImported) return;
+    
     try {
       let link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -344,6 +346,8 @@ var Grapheme = (function (exports) {
       console.error("Could not import Grapheme CSS");
       throw e;
     }
+
+    window.Grapheme.graphemeCSSImported = true;
   }
 
   class GraphemeContext {
@@ -1927,9 +1931,8 @@ void main() {
       this.axis = 'x'; // x means of the form y = f(x); y means of the form x = f(y);
       this.thickness = select(params.thickness, 3);
 
-      this.intended_samples = 1500;
       this.quick_func = x => x * (x + 1);
-      this.vertex_calculation_mode = "cow";
+      this.vertex_calculation_mode = {type: "even_sampling"};
 
       this.max_vertices = 2000;
       this.vertices = new Float64Array(2 * this.max_vertices);
@@ -1939,7 +1942,7 @@ void main() {
       this.actual_gl_vertices = 0;
     }
 
-    calculateVertices() {
+    _calculateVerticesSampling() {
       let minX, maxX;
 
       switch (this.axis) {
@@ -1962,6 +1965,10 @@ void main() {
       }
 
       this.actual_vertices = this.intended_samples;
+    }
+
+    calculateVertices() {
+
     }
 
     calculateGLVertices() {

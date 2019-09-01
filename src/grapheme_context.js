@@ -3,6 +3,8 @@ import {FancyDiv} from "./fancy_div";
 import {ContextElement} from "./context_element";
 
 function importGraphemeCSS() {
+  if (window.Grapheme.graphemeCSSImported) return;
+  
   try {
     let link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -14,6 +16,8 @@ function importGraphemeCSS() {
     console.error("Could not import Grapheme CSS");
     throw e;
   }
+
+  window.Grapheme.graphemeCSSImported = true;
 }
 
 class GraphemeContext {
