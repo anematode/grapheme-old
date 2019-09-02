@@ -171,5 +171,21 @@ function expandVerticesIntoTriangles(thickness = 1, vertices, triangles) {
 
 }
 
+function importGraphemeCSS() {
+  try {
+    let link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = '../build/grapheme.css'; // oof, must change l8r
+
+    document.getElementsByTagName('HEAD')[0].appendChild(link);
+  } catch (e) {
+    console.error("Could not import Grapheme CSS");
+    throw e;
+  }
+}
+
+importGraphemeCSS();
+
 export { mod, _updateDPRinterval, dpr, select, getID, assert, checkType, deepEquals, roundToCanvasCoord, _ctxDrawPath, isInteger, isNonnegativeInteger,
 isNonpositiveInteger, isNegativeInteger, isPositiveInteger, mergeDeep, isApproxEqual, createShaderFromSource, expandVerticesIntoTriangles, createGLProgram};

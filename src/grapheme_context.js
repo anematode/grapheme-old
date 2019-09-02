@@ -2,24 +2,6 @@ import * as utils from './utils';
 import {FancyDiv} from "./fancy_div";
 import {ContextElement} from "./context_element";
 
-function importGraphemeCSS() {
-  if (window.Grapheme.graphemeCSSImported) return;
-  
-  try {
-    let link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.type = 'text/css';
-    link.href = '../build/grapheme.css'; // oof, must change l8r
-
-    document.getElementsByTagName('HEAD')[0].appendChild(link);
-  } catch (e) {
-    console.error("Could not import Grapheme CSS");
-    throw e;
-  }
-
-  window.Grapheme.graphemeCSSImported = true;
-}
-
 class GraphemeContext {
   constructor(params = {}) {
     this.container_div = utils.select(params.container, params.container_div);
@@ -53,6 +35,7 @@ class GraphemeContext {
 
     // 0 <= r,g,b <= 255, 0 <= a <= 1 please!
     this.clear_color = {r: 255, g: 255, b: 255, a: 0.95};
+    this.gl_info = {};
 
     this._addResizeEventListeners();
   }
@@ -452,7 +435,5 @@ class GraphemeContext {
     return Math.abs(y - this.viewport.y) <= this.viewport.height / 2;
   }
 }
-
-importGraphemeCSS();
 
 export {GraphemeContext};

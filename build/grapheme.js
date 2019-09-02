@@ -172,6 +172,22 @@ var Grapheme = (function (exports) {
 
   }
 
+  function importGraphemeCSS() {
+    try {
+      let link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = '../build/grapheme.css'; // oof, must change l8r
+
+      document.getElementsByTagName('HEAD')[0].appendChild(link);
+    } catch (e) {
+      console.error("Could not import Grapheme CSS");
+      throw e;
+    }
+  }
+
+  importGraphemeCSS();
+
   var utils = /*#__PURE__*/Object.freeze({
     mod: mod,
     _updateDPRinterval: _updateDPRinterval,
@@ -332,24 +348,6 @@ var Grapheme = (function (exports) {
     }
   }
 
-  function importGraphemeCSS() {
-    if (window.Grapheme.graphemeCSSImported) return;
-    
-    try {
-      let link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.type = 'text/css';
-      link.href = '../build/grapheme.css'; // oof, must change l8r
-
-      document.getElementsByTagName('HEAD')[0].appendChild(link);
-    } catch (e) {
-      console.error("Could not import Grapheme CSS");
-      throw e;
-    }
-
-    window.Grapheme.graphemeCSSImported = true;
-  }
-
   class GraphemeContext {
     constructor(params = {}) {
       this.container_div = select(params.container, params.container_div);
@@ -383,6 +381,7 @@ var Grapheme = (function (exports) {
 
       // 0 <= r,g,b <= 255, 0 <= a <= 1 please!
       this.clear_color = {r: 255, g: 255, b: 255, a: 0.95};
+      this.gl_info = {};
 
       this._addResizeEventListeners();
     }
@@ -782,8 +781,6 @@ var Grapheme = (function (exports) {
       return Math.abs(y - this.viewport.y) <= this.viewport.height / 2;
     }
   }
-
-  importGraphemeCSS();
 
   function getMouseOnCanvas(canvas, evt) {
     let rect = canvas.getBoundingClientRect();
@@ -1997,12 +1994,33 @@ void main() {
 
   }
 
+  // polyline primitive in Cartesian coordinates
+  // has thickness, vertex information,
+  class PolylinePrimitive {
+    constructor() {
+      this.vertices = []; // x,y values in Cartesian
+      this.color = 0x000000ff; //r,g,b,a
+      this.thickness = 2; // thickness of the polyline in 
+
+      this.gl_triangle_strip = null;
+    }
+
+    _calculateTriangles(grapheme_context) {
+      // This is nontriviial
+    }
+
+    draw(recalculate=true) {
+
+    }
+  }
+
   exports.AutoGridlines = AutoGridlines;
   exports.FunctionalGraph = FunctionalGraph;
   exports.GraphemeContext = GraphemeContext;
   exports.Gridlines = Gridlines;
   exports.InteractiveContext = InteractiveContext;
   exports.IntervalFunctions = IntervalFunctions;
+  exports.PolylinePrimitive = PolylinePrimitive;
   exports.convert_char = convert_char;
   exports.exponent_reference = exponent_reference;
   exports.exponentify = exponentify;
