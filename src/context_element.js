@@ -9,11 +9,11 @@ class ContextElement {
     this.display = utils.select(params.display, true);
     this.lastDrawn = -1;
 
-    this.fancy_ticket = this.context.fancy_div.getTicket();
     this.context.addElement(this);
   }
 
   draw(info) {
+    if (!this.override_display && !this.display) return;
     this.lastDrawn = Date.now();
   }
 

@@ -17,12 +17,6 @@ class GraphemeContext {
     this.canvas.classList.add("grapheme-canvas");
     this.text_canvas.classList.add("grapheme-text-canvas");
 
-    let fancy_div_elem = document.createElement("div");
-    fancy_div_elem.classList.add("grapheme-fancy-div");
-    this.container_div.append(fancy_div_elem);
-
-    this.fancy_div = new FancyDiv(fancy_div_elem);
-
     this.text_canvas_ctx = this.text_canvas.getContext("2d");
     this.gl = this.canvas.getContext("webgl") || this.canvas.getContext("experimental-webgl");
 
@@ -42,7 +36,13 @@ class GraphemeContext {
 
   drawFrame() {
     this.clearCanvas();
-    let info = {viewport: this.viewport};
+
+    let info = {
+      viewport: this.viewport,
+      viewport_changed: utils.deepEquals(this.viewport, this._last_viewport)
+    };
+
+    this._last_viewport = {...this.viewport};
 
     for (let i = 0; i < this.elements.length; ++i) {
       this.elements[i].draw(this.canvas, this.canvas_ctx, info);
@@ -105,12 +105,6 @@ class GraphemeContext {
 
   // Canvas management stuff
 
-  _addResizeEventListeners() {
-    this.resize_observer = new ResizeObserver(() => this.onResize());
-    this.resize_observer.observe(this.container_div);
-    window.addEventListener("load", () => this.onResize(), {once: true});
-  }
-
   onResize() {
     this.resizeCanvas();
   }
@@ -128,6 +122,12 @@ class GraphemeContext {
 
     // set the GL viewport to the whole canvas
     this.gl.viewport(0, 0, this.width, this.height);
+  }
+
+  _addResizeEventListeners() {
+    this.resize_observer = new ResizeObserver(() => this.onResize());
+    this.resize_observer.observe(this.container_div);
+    window.addEventListener("load", () => this.onResize(), {once: true});
   }
 
   clearCanvas(color=this.clear_color) {

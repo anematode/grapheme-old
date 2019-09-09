@@ -19,6 +19,8 @@ let grapheme_context = new Grapheme.InteractiveContext({
 });
 let gridlines = new Grapheme.AutoGridlines(grapheme_context);
 let func = new Grapheme.FunctionalGraph(grapheme_context);
+let polyline = new Grapheme.PolylinePrimitive();
+polyline.vertices = [40, 40, 65, 100, -40, 30, 40, -25, 40, -40];
 
 let render = function() {
   grapheme_context.viewport.height = grapheme_context.viewport.width * grapheme_context.height / grapheme_context.width;
