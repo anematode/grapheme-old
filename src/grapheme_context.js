@@ -29,7 +29,7 @@ class GraphemeContext {
 
     // 0 <= r,g,b <= 255, 0 <= a <= 1 please!
     this.clear_color = {r: 255, g: 255, b: 255, a: 0.95};
-    this.gl_info = {};
+    this.gl_infos = {};
 
     this._addResizeEventListeners();
   }
@@ -409,6 +409,17 @@ class GraphemeContext {
 
   pixelToGLVY(y) {
     return 2 * y / this.height;
+  }
+
+  pixelToGLFloatArray(arr) {
+    let x_scale = 2 / this.width, y_scale = 2 / this.height;
+
+    for (let i = 0; i < arr.length; i += 2) {
+      arr[i] *= x_scale;
+      arr[i + 1] *= y_scale;
+    }
+
+    return arr;
   }
 
   minX() {

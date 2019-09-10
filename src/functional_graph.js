@@ -2,9 +2,9 @@ import {ContextElement} from "./context_element";
 import {IntervalFunctions as IF} from "./intervals";
 import * as utils from "./utils";
 
-const VERTEX_CALCULATION_MODE_TYPES = {
+const VERTEX_CALCULATION_MODES = {
   EVEN_SAMPLING: "es",
-  
+  EVEN_SAMPLING_LIMIT_FINDING: "eslf"
 };
 
 class FunctionalGraph extends ContextElement {
@@ -16,7 +16,7 @@ class FunctionalGraph extends ContextElement {
     this.thickness = utils.select(params.thickness, 3);
 
     this.quick_func = x => x * (x + 1);
-    this.vertex_calculation_mode = {type: "even_sampling"};
+    this.vertex_calculation_mode = {type: VERTEX_CALCULATION_MODES.EVEN_SAMPLING, samples: 1500};
 
     this.max_vertices = 2000;
     this.vertices = new Float64Array(2 * this.max_vertices);
@@ -26,7 +26,7 @@ class FunctionalGraph extends ContextElement {
     this.actual_gl_vertices = 0;
   }
 
-  _calculateVerticesSampling() {
+  _calculateVerticesViaSampling(num_samples) {
     let minX, maxX;
 
     switch (this.axis) {
@@ -52,8 +52,16 @@ class FunctionalGraph extends ContextElement {
     this.actual_vertices = this.intended_samples;
   }
 
-  calculateVertices() {
+  _calculateVerticesViaSamplingLimitFinding(samples) {
 
+  }
+
+  calculateVertices() {
+    switch (this.vertex_calculation_mode.type) {
+      case VERTEX_CALCULATION_MODES.EVEN_SAMPLING:
+        this._calculateVerticesViaSampling();
+        break;
+    }
   }
 
   calculateGLVertices() {
