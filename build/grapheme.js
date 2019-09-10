@@ -648,11 +648,11 @@ var Grapheme = (function (exports) {
     }
 
     pixelToGLFloatArray(arr) {
-      let x_scale = 2 / this.width, y_scale = 2 / this.height;
+      let x_scale = 2 / this.width, y_scale = -2 / this.height;
 
       for (let i = 0; i < arr.length; i += 2) {
-        arr[i] *= x_scale;
-        arr[i + 1] *= y_scale;
+        arr[i] = arr[i] * x_scale - 1;
+        arr[i+1] = arr[i+1] * y_scale + 1;
       }
 
       return arr;
