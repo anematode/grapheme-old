@@ -18,13 +18,13 @@
 <p>Thickness:</p>
 <input type="range" name="thickness" min="0" max="30" value="2" oninput="polyline.thickness = this.value;">
 <p>Endcap type:</p>
-<input type="radio" name="endcap" value="square" oninput="polyline.endcap = this.value;">Square<br>
-<input type="radio" name="endcap" value="none" oninput="polyline.endcap = this.value;">None<br>
-<input type="radio" name="endcap" value="round" oninput="polyline.endcap = this.value;">Round<br>
+<input type="radio" name="endcap" value="0" oninput="polyline.endcap_type = parseInt(this.value);">None<br>
+<input type="radio" name="endcap" value="1" oninput="polyline.endcap_type = parseInt(this.value);">Round<br>
 <p>Join type:</p>
-<input type="radio" name="jt" value="round" oninput="polyline.join_type = this.value;">Round<br>
-<input type="radio" name="jt" value="none" oninput="polyline.join_type = this.value;">None<br>
-<input type="radio" name="jt" value="vnormal" oninput="polyline.join_type = this.value;">Unusual<br>
+<input type="radio" name="jt" value="0" oninput="polyline.join_type = parseInt(this.value);">None<br>
+<input type="radio" name="jt" value="1" oninput="polyline.join_type = parseInt(this.value);">Round<br>
+<input type="radio" name="jt" value="2" oninput="polyline.join_type = parseInt(this.value);">Miter<br>
+<input type="radio" name="jt" value="3" oninput="polyline.join_type = parseInt(this.value);">Dynamic<br>
 </div>
 <div class="outer-div" id="grapheme-container"></div>
 </div>
@@ -46,7 +46,7 @@ grapheme_context.container_div.onclick = (evt) => {
 }
 
 let render = function() {
-  grapheme_context.viewport.height = grapheme_context.viewport.width * grapheme_context.height / grapheme_context.width;
+  // grapheme_context.viewport.height = grapheme_context.viewport.width * grapheme_context.height / grapheme_context.width;
 
   grapheme_context.drawFrame();
   polyline.draw();
