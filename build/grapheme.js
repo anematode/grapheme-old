@@ -2001,7 +2001,7 @@ void main() {
       this.thickness = 2; // thickness of the polyline in pixels
       this.endcap = "round"; // "none", "round", "square"
       this.endcap_res = 0.4; // angle in radians between consecutive roundings
-      this.join_type = "round"; // "none", "round", "miter", "vnormal", "dynamic"
+      this.join_type = "round"; // "none", "round", "miter", "vnormal"
       this.join_res = 0.5; // angle in radians between consecutive roundings
 
       this._gl_triangle_strip_vertices = null;
@@ -2011,20 +2011,32 @@ void main() {
     _calculateTriangles(grapheme_context) {
       // This is nontrivial
 
+      if (this.thickness === 0)
+        this._gl_triangle_strip_vertices = new Float32Array();
+
       let tri_strip_vertices = [];
       let vertices = this.vertices;
       let original_vertex_count = vertices.length / 2;
       let th = this.thickness;
+      let need_to_dupe_vertex = false;
 
       function addVertex(x,y) {
         tri_strip_vertices.push(x);
         tri_strip_vertices.push(y);
+
+        if (need_to_dupe_vertex) {
+          tri_strip_vertices.push(x);
+          tri_strip_vertices.push(y);
+
+          need_to_dupe_vertex = false;
+        }
       }
 
       function duplicateVertex() {
         tri_strip_vertices.push(tri_strip_vertices[tri_strip_vertices.length - 2]);
         tri_strip_vertices.push(tri_strip_vertices[tri_strip_vertices.length - 2]);
       }
+
 
       for (let i = 0; i < original_vertex_count; ++i) {
         let x1 = (i !== 0) ? vertices[2 * i - 2] : NaN; // Previous vertex
@@ -2120,6 +2132,7 @@ void main() {
 
         if (isNaN(x2) || isNaN(x2)) {
           duplicateVertex();
+          need_to_dupe_vertex = true;
           continue;
         } else { // all vertices are defined, time to draw a joiner
           if (this.join_type === "vnormal") {

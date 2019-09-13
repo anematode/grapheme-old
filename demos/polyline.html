@@ -1,0 +1,61 @@
+<!doctype html>
+
+<html>
+<head>
+  <title>Grapheme WebGL Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+
+<body>
+<div class="suqulent">
+<div class="cow-div">
+<p>Click around on the canvas on the right to add vertices!</p>
+<p>Polyline color:</p>
+<input type="color" name="polyline_color" value="#111111" oninput="polyline.color = parseInt(this.value.slice(1), 16) * 256 + 255;">
+<br>
+<button onclick="polyline.vertices = [];">Clear Vertices</button>
+<button onclick="polyline.vertices.push(NaN); polyline.vertices.push(NaN); ">Add Break</button>
+<p>Thickness:</p>
+<input type="range" name="thickness" min="0" max="30" value="2" oninput="polyline.thickness = this.value;">
+<p>Endcap type:</p>
+<input type="radio" name="endcap" value="square" oninput="polyline.endcap = this.value;">Square<br>
+<input type="radio" name="endcap" value="none" oninput="polyline.endcap = this.value;">None<br>
+<input type="radio" name="endcap" value="round" oninput="polyline.endcap = this.value;">Round<br>
+<p>Join type:</p>
+<input type="radio" name="jt" value="round" oninput="polyline.join_type = this.value;">Round<br>
+<input type="radio" name="jt" value="none" oninput="polyline.join_type = this.value;">None<br>
+<input type="radio" name="jt" value="vnormal" oninput="polyline.join_type = this.value;">Unusual<br>
+</div>
+<div class="outer-div" id="grapheme-container"></div>
+</div>
+
+<script src="../build/grapheme.js"></script>
+<script>
+let grapheme_context = new Grapheme.InteractiveContext({
+  container_div: document.getElementById("grapheme-container")
+});
+
+grapheme_context.clear_color.r = 200;
+
+let polyline = new Grapheme.PolylinePrimitive(grapheme_context);
+
+grapheme_context.container_div.onclick = (evt) => {
+  let rect = grapheme_context.canvas.getBoundingClientRect();
+  polyline.vertices.push((evt.pageX - rect.left) * Grapheme.utils.dpr);
+  polyline.vertices.push((evt.pageY - rect.top) * Grapheme.utils.dpr);
+}
+
+let render = function() {
+  grapheme_context.viewport.height = grapheme_context.viewport.width * grapheme_context.height / grapheme_context.width;
+
+  grapheme_context.drawFrame();
+  polyline.draw();
+
+  requestAnimationFrame(render);
+};
+
+window.onload = render;
+</script>
+</body>
+
+</html>
