@@ -1,5 +1,6 @@
 import * as utils from "../utils";
 import {ContextElement} from "../context_element";
+import {PrimitiveElement} from "./primitive";
 
 // this vertex shader is used for the polylines
 const vertexShaderSource = `// set the float precision of the shader to medium precision
@@ -49,9 +50,11 @@ vertexLoc: gl.getAttribLocation(program, "v_position")};
   return grapheme.gl_infos._polylineShader;
 }
 
+
+
 // polyline primitive in Cartesian coordinates
 // has thickness, vertex information, and color stuff
-class PolylinePrimitive extends ContextElement {
+class PolylinePrimitive extends PrimitiveElement {
   constructor(grapheme_context, params = {}) {
     super(grapheme_context, params);
 

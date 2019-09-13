@@ -1,9 +1,9 @@
 import * as utils from "../utils";
 
 // Class representing basic things to draw in Grapheme like circles, sets of circles, text, polygons, etc.
-class GraphemePrimitive {
-  constructor() {
-    
+class PrimitiveElement {
+  constructor(grapheme_context, params={}) {
+    this.context = grapheme_context;
   }
 
   draw() {
@@ -15,4 +15,4 @@ class GraphemePrimitive {
   }
 }
 
-export {GraphemePrimitive};
+export {PrimitiveElement};

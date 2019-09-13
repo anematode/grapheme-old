@@ -213,27 +213,41 @@ var Grapheme = (function (exports) {
 
   class ContextElement {
     constructor(grapheme_context, params={}) {
+      // The grapheme context containing this element
       this.context = grapheme_context;
 
+      // A unique numeric ID (nonnegative integer) associated with this element
       this.id = getID();
+
+      // Effectively the z-index of the element; in what order will this element be drawn?
       this.precedence = select(params.precedence, 1);
+
+      // Whether or not to call draw() on this element, though this can be overriden
+      // by this.override_display (TODO)
       this.display = select(params.display, true);
+
+      // The Date at which this was last drawn
       this.lastDrawn = -1;
 
+      // Formally adds this element to the grapheme context it is a part of,
+      // allowing it to be manipulated from the context itself
       this.context.addElement(this);
     }
 
-    draw(info) {
+    draw() {
       if (!this.override_display && !this.display) return;
+
+      // Set the time at which it was last drawn
       this.lastDrawn = Date.now();
     }
 
     destroy() {
+      // Remove this element from the parent context
       this.remove();
-      this.fancy_div.removeTicket(this.fancy_ticket);
     }
 
     remove() {
+      // Remove this element from the parent context
       this.context.removeElement(this);
     }
   }
@@ -1908,6 +1922,21 @@ void main() {
 
   }
 
+  // Class representing basic things to draw in Grapheme like circles, sets of circles, text, polygons, etc.
+  class PrimitiveElement {
+    constructor(grapheme_context, params={}) {
+      this.context = grapheme_context;
+    }
+
+    draw() {
+      throw new Error("No Context drawing implemented");
+    }
+
+    drawSVG() {
+      throw new Error("No SVG drawing implemented");
+    }
+  }
+
   // this vertex shader is used for the polylines
   const vertexShaderSource$1 = `// set the float precision of the shader to medium precision
 precision mediump float;
@@ -1956,9 +1985,11 @@ void main() {
     return grapheme.gl_infos._polylineShader;
   }
 
+
+
   // polyline primitive in Cartesian coordinates
   // has thickness, vertex information, and color stuff
-  class PolylinePrimitive extends ContextElement {
+  class PolylinePrimitive extends PrimitiveElement {
     constructor(grapheme_context, params = {}) {
       super(grapheme_context, params);
 
