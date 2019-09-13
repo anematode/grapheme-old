@@ -94,6 +94,8 @@ class PolylinePrimitive extends PrimitiveElement {
     this.join_type = 1; // refer to ENDCAP enum
     this.join_res = 0.5; // angle in radians between consecutive roundings
 
+    this.use_native = false;
+
     this._gl_triangle_strip_vertices = null;
     this._gl_triangle_strip_vertices_total = 0;
   }
@@ -134,15 +136,17 @@ class PolylinePrimitive extends PrimitiveElement {
 
     let gl_tri_strip_i = 0;
     let that = this; // ew
+    let tri_strip_vertices_threshold = tri_strip_vertices.length - 2;
 
     function addVertex(x, y) {
-      if (gl_tri_strip_i > tri_strip_vertices.length - 2) {
+      if (gl_tri_strip_i > tri_strip_vertices_threshold) {
         // not enough space!!!!
 
         let new_float_array = new Float32Array(2 * tri_strip_vertices.length);
         new_float_array.set(tri_strip_vertices);
 
         tri_strip_vertices = that._gl_triangle_strip_vertices = new_float_array;
+        tri_strip_vertices_threshold = tri_strip_vertices.length - 2;
       }
 
       tri_strip_vertices[gl_tri_strip_i++] = x;
@@ -166,14 +170,17 @@ class PolylinePrimitive extends PrimitiveElement {
 
     let max_miter_length = th / Math.cos(this.join_res / 2);
 
-    for (let i = 0; i < original_vertex_count; ++i) {
-      let x1 = (i !== 0) ? vertices[2 * i - 2] : NaN; // Previous vertex
-      let x2 = vertices[2 * i]; // Current vertex
-      let x3 = (i !== original_vertex_count - 1) ? vertices[2 * i + 2] : NaN; // Next vertex
+    let x1,x2,x3,y1,y2,y3;
+    let v1x, v1y, v2x, v2y, v1l, v2l, b1_x, b1_y, scale, nu_x, nu_y, pu_x, pu_y, dis;
 
-      let y1 = (i !== 0) ? vertices[2 * i - 1] : NaN; // Previous vertex
-      let y2 = vertices[2 * i + 1]; // Current vertex
-      let y3 = (i !== original_vertex_count - 1) ? vertices[2 * i + 3] : NaN; // Next vertex
+    for (let i = 0; i < original_vertex_count; ++i) {
+      x1 = (i !== 0) ? vertices[2 * i - 2] : NaN; // Previous vertex
+      x2 = vertices[2 * i]; // Current vertex
+      x3 = (i !== original_vertex_count - 1) ? vertices[2 * i + 2] : NaN; // Next vertex
+
+      y1 = (i !== 0) ? vertices[2 * i - 1] : NaN; // Previous vertex
+      y2 = vertices[2 * i + 1]; // Current vertex
+      y3 = (i !== original_vertex_count - 1) ? vertices[2 * i + 3] : NaN; // Next vertex
 
       if (isNaN(x1) || isNaN(y1)) { // starting endcap
         let nu_x = x3 - x2;
@@ -259,15 +266,16 @@ class PolylinePrimitive extends PrimitiveElement {
         if (this.join_type === 2 || this.join_type === 3) {
           // find the two angle bisectors of the angle formed by v1 = p1 -> p2 and v2 = p2 -> p3
 
-          let v1x = x1 - x2;
-          let v1y = y1 - y2;
-          let v2x = x3 - x2;
-          let v2y = y3 - y2;
+          v1x = x1 - x2;
+          v1y = y1 - y2;
+          v2x = x3 - x2;
+          v2y = y3 - y2;
 
-          let v1l = Math.hypot(v1x, v1y), v2l = Math.hypot(v2x, v2y);
+          v1l = Math.hypot(v1x, v1y);
+          v2l = Math.hypot(v2x, v2y);
 
-          let b1_x = v2l * v1x + v1l * v2x, b1_y = v2l * v1y + v1l * v2y;
-          let scale = 1 / Math.hypot(b1_x, b1_y);
+          b1_x = v2l * v1x + v1l * v2x, b1_y = v2l * v1y + v1l * v2y;
+          scale = 1 / Math.hypot(b1_x, b1_y);
 
           if (scale === Infinity || scale === -Infinity) {
             b1_x = -v1y;
@@ -295,9 +303,9 @@ class PolylinePrimitive extends PrimitiveElement {
           }
         }
 
-        let nu_x = x3 - x2;
-        let nu_y = y3 - y2;
-        let dis = Math.hypot(nu_x, nu_y);
+        nu_x = x3 - x2;
+        nu_y = y3 - y2;
+        dis = Math.hypot(nu_x, nu_y);
 
         if (dis === 0) {
           nu_x = 1;
@@ -307,8 +315,8 @@ class PolylinePrimitive extends PrimitiveElement {
           nu_y /= dis;
         }
 
-        let pu_x = x2 - x1;
-        let pu_y = y2 - y1;
+        pu_x = x2 - x1;
+        pu_y = y2 - y1;
         dis = Math.hypot(pu_x, pu_y);
 
         if (dis === 0) {
@@ -322,45 +330,33 @@ class PolylinePrimitive extends PrimitiveElement {
         addVertex(x2 + th * pu_y, y2 - th * pu_x);
         addVertex(x2 - th * pu_y, y2 + th * pu_x);
 
-        switch (this.join_type) {
-          case 0:
-            break;
-          case 1:
-          case 3:
-            let a1 = Math.atan2(-pu_y, -pu_x) - Math.PI/2;
-            let a2 = Math.atan2(nu_y, nu_x) - Math.PI/2;
+        if (this.join_type === 1 || this.join_type === 3) {
+          let a1 = Math.atan2(-pu_y, -pu_x) - Math.PI/2;
+          let a2 = Math.atan2(nu_y, nu_x) - Math.PI/2;
 
-            // if right turn, flip a2
-            // if left turn, flip a1
+          // if right turn, flip a2
+          // if left turn, flip a1
 
-            let start_a, end_a;
+          let start_a, end_a;
 
-            if (utils.mod(a1 - a2, 2 * Math.PI) < Math.PI) {
-              // left turn
-              start_a = Math.PI + a1;
-              end_a = a2;
-            } else {
-              start_a = Math.PI + a2;
-              end_a = a1;
-            }
+          if (utils.mod(a1 - a2, 2 * Math.PI) < Math.PI) {
+            // left turn
+            start_a = Math.PI + a1;
+            end_a = a2;
+          } else {
+            start_a = Math.PI + a2;
+            end_a = a1;
+          }
 
-            let angle_subtended = utils.mod(end_a - start_a, 2 * Math.PI);
-            let steps_needed = Math.ceil(angle_subtended / this.join_res);
+          let angle_subtended = utils.mod(end_a - start_a, 2 * Math.PI);
+          let steps_needed = Math.ceil(angle_subtended / this.join_res);
 
-            for (let i = 0; i <= steps_needed; ++i) {
-              let theta_c = start_a + angle_subtended * i / steps_needed;
+          for (let i = 0; i <= steps_needed; ++i) {
+            let theta_c = start_a + angle_subtended * i / steps_needed;
 
-              addVertex(x2 + th * Math.cos(theta_c), y2 + th * Math.sin(theta_c));
-              addVertex(x2, y2);
-            }
-
-            break;
-          case 2:
-            addVertex(x2 + th * nu_x, y2 - th * nu_y);
-            addVertex(x2 - th * pu_x, y2 + th * pu_y);
-            break;
-          case 3:
-            break;
+            addVertex(x2 + th * Math.cos(theta_c), y2 + th * Math.sin(theta_c));
+            addVertex(x2, y2);
+          }
         }
 
         addVertex(x2 + th * nu_y, y2 - th * nu_x);
@@ -369,7 +365,6 @@ class PolylinePrimitive extends PrimitiveElement {
     }
 
     if (gl_tri_strip_i * 2 < tri_strip_vertices.length) {
-      console.log(gl_tri_strip_i, tri_strip_vertices, Math.min(Math.max(MIN_SIZE, nextPowerOfTwo(gl_tri_strip_i)), MAX_SIZE));
       let new_float_array = new Float32Array(Math.min(Math.max(MIN_SIZE, nextPowerOfTwo(gl_tri_strip_i)), MAX_SIZE));
       new_float_array.set(tri_strip_vertices.subarray(0, gl_tri_strip_i));
 
@@ -377,17 +372,53 @@ class PolylinePrimitive extends PrimitiveElement {
     }
 
     this.context.pixelToGLFloatArray(tri_strip_vertices);
-    this._gl_triangle_strip_vertices_total = gl_tri_strip_i / 2;
+    this._gl_triangle_strip_vertices_total = Math.ceil(gl_tri_strip_i / 2);
+  }
+
+  _calculateNativeLines() {
+    let vertices = this.vertices;
+
+    if (vertices.length <= 3) {
+      this._gl_triangle_strip_vertices_total = 0;
+      return;
+    }
+
+    let tri_strip_vertices = this._gl_triangle_strip_vertices;
+    if (!tri_strip_vertices) {
+      tri_strip_vertices = this._gl_triangle_strip_vertices = new Float32Array(MIN_SIZE);
+    }
+
+    if (tri_strip_vertices.length < vertices.length || tri_strip_vertices.length > vertices.length * 2) {
+      tri_strip_vertices = this._gl_triangle_strip_vertices = new Float32Array(Math.min(Math.max(MIN_SIZE, nextPowerOfTwo(vertices.length)), MAX_SIZE))
+    }
+
+    for (let i = 0; i < vertices.length; ++i) {
+      tri_strip_vertices[i] = vertices[i];
+    }
+
+    this.context.pixelToGLFloatArray(tri_strip_vertices);
+    this._gl_triangle_strip_vertices_total = Math.ceil(vertices.length / 2);
   }
 
   draw(recalculate = true) {
-    this._calculateTriangles();
+    if (this._last_native !== this.use_native)
+      recalculate = true;
+
+    if (!this.use_native && recalculate) {
+      this._calculateTriangles();
+    } else {
+      // use native LINE_STRIP for xtreme speed
+
+      this._calculateNativeLines();
+    }
+
+    this._last_native = this.use_native;
 
     let gl_info = this.gl_info;
     let gl = this.context.gl;
 
     let vertexCount = this._gl_triangle_strip_vertices_total;
-    if (vertexCount < 3) return;
+    if ((this.use_native && vertexCount < 2) || (!this.use_native && vertexCount < 3)) return;
 
     // tell webgl to start using the gridline program
     gl.useProgram(gl_info.program);
@@ -415,7 +446,7 @@ class PolylinePrimitive extends PrimitiveElement {
     gl.vertexAttribPointer(gl_info.vertexLoc, 2, gl.FLOAT, false, 0, 0);
 
     // draw the vertices as triangle strip
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount);
+    gl.drawArrays(this.use_native ? gl.LINE_STRIP : gl.TRIANGLE_STRIP, 0, vertexCount);
   }
 }
 
