@@ -25,6 +25,8 @@
 <input type="radio" name="jt" value="1" oninput="polyline.join_type = parseInt(this.value);">Round<br>
 <input type="radio" name="jt" value="2" oninput="polyline.join_type = parseInt(this.value);">Miter<br>
 <input type="radio" name="jt" value="3" oninput="polyline.join_type = parseInt(this.value);">Dynamic<br>
+<p>Use native LINE_STRIP:</p>
+<input type="checkbox" name="line_strip" oninput="polyline.use_native = this.checked;">Enable</input>
 </div>
 <div class="outer-div" id="grapheme-container"></div>
 </div>

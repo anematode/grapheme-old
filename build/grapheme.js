@@ -798,28 +798,6 @@ var Grapheme = (function (exports) {
     }
   }
 
-  // this vertex shader is used for the gridlines
-  const vertexShaderSource = `// set the float precision of the shader to medium precision
-precision mediump float;
-// a vector containing the 2D position of the vertex
-attribute vec2 v_position;
-
-void main() {
-  // set the vertex's resultant position
-  gl_Position = vec4(v_position, 0, 1);
-}`;
-
-  // this frag shader is used for the gridlines
-  const fragmentShaderSource = `// set the float precision of the shader to medium precision
-precision mediump float;
-// vec4 containing the color of the line to be drawn
-uniform vec4 line_color;
-
-void main() {
-  gl_FragColor = line_color;
-}
-`;
-
   /*
   This is a general gridlines class that can be used to draw a series of gridlines
   in the x and y directions, which take up the whole screen. These gridlines can
@@ -891,10 +869,7 @@ void main() {
       super(context, params);
 
       this.gridlines = {};
-
-      this.max_render_gridlines = params.max_gridlines || 1000;
-
-      this.gridline_vertices = new Float32Array(this.max_render_gridlines * 12);
+      this.polylines = {};
 
       this.vertex_position_buf = this.context.gl.createBuffer();
 
@@ -902,44 +877,6 @@ void main() {
       this.label_eclipse_width = select(params.label_eclipse_width, 4);
       // the style of the thin border around the text
       this.label_eclipse_style = select(params.label_eclipse_style, "white");
-    }
-
-    _getGridlinesShaderProgram() {
-      // if we already have a gridlines shader for this context, use it!
-      if (this.context._gridlinesShader)
-        return this.context._gridlinesShader;
-
-      let gl = this.context.gl;
-
-      // create the vertex shader
-      let vertShad = createShaderFromSource(gl /* rendering context */,
-        gl.VERTEX_SHADER /* enum for vertex shader type */,
-        vertexShaderSource /* source of the vertex shader*/ );
-
-      // create the frag shader
-      let fragShad = createShaderFromSource(gl /* rendering context */,
-        gl.FRAGMENT_SHADER /* enum for vertex shader type */,
-        fragmentShaderSource /* source of the vertex shader*/ );
-
-      // create the program. we set _gridlinesShader in the parent Context so that
-      // any future gridlines in this Context will use the already-compiled shader
-      let program = this.context._gridlinesShader = createGLProgram(gl, vertShad, fragShad);
-
-      // get the location of the vec4 in the program to set the color
-      this.context._gridlinesShaderColorLoc = gl.getUniformLocation(program, "line_color");
-
-      // get the location of the vertex array in the program
-      this.context._gridlinesShaderVertexLoc = gl.getAttribLocation(program, "v_position");
-
-      return program;
-    }
-
-    _gridlinesShaderColorLoc() {
-      return this.context._gridlinesShaderColorLoc;
-    }
-
-    _gridlinesShaderVertexLoc() {
-      return this.context._gridlinesShaderVertexLoc;
     }
 
     drawLines() {
@@ -960,76 +897,27 @@ void main() {
       // bind our webgl buffer to gl.ARRAY_BUFFER access point
       gl.bindBuffer(gl.ARRAY_BUFFER, this.vertex_position_buf);
 
-      let m,y1,y2,x1,x2,delta; // calculation variables
+      let m,delta; // calculation variables
       let width = this.context.width, height = this.context.height;
 
       // for each color...
       for (let color_i = 0; color_i < colors.length; ++color_i) {
         let color = colors[color_i];
         let gridl_subset = this.gridlines[colors[color_i]];
-        let vertex_i = -1;
 
-        // ... fill up the vertices float32array with triangles corresponding to those lines
         for (let i = 0; i < gridl_subset.length; ++i) {
           let gridline = gridl_subset[i];
           let thickness_d = gridline.pen * dpr / 2;
 
           switch (gridline.dir) {
             case 'x':
-              m = this.context.cartesianToGLX(gridline.pos);
-              delta = this.context.pixelToGLVX(thickness_d);
-              x1 = m - delta;
-              x2 = m + delta;
-              y1 = -1, y2 = 1; // set y1 and y2 to the bounds of clip space
-
-              break;
+              m = this.context.cartesianToPixelX(gridline.pos);
+              
             case 'y':
-              m = this.context.cartesianToGLY(gridline.pos);
+              m = this.context.cartesianToPixelY(gridline.pos);
               delta = -this.context.pixelToGLVY(thickness_d);
-              y1 = m - delta;
-              y2 = m + delta;
-              x1 = -1, x2 = 1;
-
-              break;
           }
-
-          // Make a rectangle for each line
-          // Triangle 1
-          vertices[++vertex_i] = x1;
-          vertices[++vertex_i] = y1;
-          vertices[++vertex_i] = x1;
-          vertices[++vertex_i] = y2;
-          vertices[++vertex_i] = x2;
-          vertices[++vertex_i] = y2;
-
-          // Triangle 2
-          vertices[++vertex_i] = x1;
-          vertices[++vertex_i] = y1;
-          vertices[++vertex_i] = x2;
-          vertices[++vertex_i] = y1;
-          vertices[++vertex_i] = x2;
-          vertices[++vertex_i] = y2;
         }
-
-        // set the vec4 at colorLocation to (r, g, b, a)
-        gl.uniform4f(colorLocation,
-          ((color >> 24) & 0xff) / 255, // bit masks to retrieve r, g, b and a
-          ((color >> 16) & 0xff) / 255, // divided by 255 because webgl likes [0.0, 1.0]
-          ((color >> 8) & 0xff) / 255,
-          (color & 0xff) / 255);
-
-        // copy our vertex data to the GPU
-        gl.bufferData(gl.ARRAY_BUFFER, this.gridline_vertices, gl.DYNAMIC_DRAW /* means we will rewrite the data often */);
-
-        // enable the vertices location attribute to be used in the program
-        gl.enableVertexAttribArray(verticesLocation);
-
-        // tell it that the width of vertices is 2 (since it's x,y), that it's floats,
-        // that it shouldn't normalize floats, and something i don't understand
-        gl.vertexAttribPointer(verticesLocation, 2, gl.FLOAT, false, 0, 0);
-
-        // draw the vertices as triple-wise triangles
-        gl.drawArrays(gl.TRIANGLES, 0, (vertex_i + 1) / 2);
       }
     }
 
@@ -1938,7 +1826,7 @@ void main() {
   }
 
   // this vertex shader is used for the polylines
-  const vertexShaderSource$1 = `// set the float precision of the shader to medium precision
+  const vertexShaderSource = `// set the float precision of the shader to medium precision
 precision mediump float;
 // a vector containing the 2D position of the vertex
 attribute vec2 v_position;
@@ -1949,7 +1837,7 @@ void main() {
 }`;
 
   // this frag shader is used for the polylines
-  const fragmentShaderSource$1 = `// set the float precision of the shader to medium precision
+  const fragmentShaderSource = `// set the float precision of the shader to medium precision
 precision mediump float;
 // vec4 containing the color of the line to be drawn
 uniform vec4 line_color;
@@ -1968,12 +1856,12 @@ void main() {
     // create the vertex shader
     let vertShad = createShaderFromSource(gl /* rendering context */,
       gl.VERTEX_SHADER /* enum for vertex shader type */,
-      vertexShaderSource$1 /* source of the vertex shader*/ );
+      vertexShaderSource /* source of the vertex shader*/ );
 
     // create the frag shader
     let fragShad = createShaderFromSource(gl /* rendering context */,
       gl.FRAGMENT_SHADER /* enum for vertex shader type */,
-      fragmentShaderSource$1 /* source of the vertex shader*/ );
+      fragmentShaderSource /* source of the vertex shader*/ );
 
     // create the program. we set _polylineShader in the parent Context so that
     // any future gridlines in this Context will use the already-compiled shader
@@ -2327,8 +2215,12 @@ void main() {
         tri_strip_vertices = this._gl_triangle_strip_vertices = new Float32Array(Math.min(Math.max(MIN_SIZE, nextPowerOfTwo(vertices.length)), MAX_SIZE));
       }
 
-      for (let i = 0; i < vertices.length; ++i) {
-        tri_strip_vertices[i] = vertices[i];
+      if (Array.isArray(vertices)) {
+        for (let i = 0; i < vertices.length; ++i) {
+          tri_strip_vertices[i] = vertices[i];
+        }
+      } else {
+        tri_strip_vertices.set(vertices);
       }
 
       this.context.pixelToGLFloatArray(tri_strip_vertices);

@@ -392,8 +392,12 @@ class PolylinePrimitive extends PrimitiveElement {
       tri_strip_vertices = this._gl_triangle_strip_vertices = new Float32Array(Math.min(Math.max(MIN_SIZE, nextPowerOfTwo(vertices.length)), MAX_SIZE))
     }
 
-    for (let i = 0; i < vertices.length; ++i) {
-      tri_strip_vertices[i] = vertices[i];
+    if (Array.isArray(vertices)) {
+      for (let i = 0; i < vertices.length; ++i) {
+        tri_strip_vertices[i] = vertices[i];
+      }
+    } else {
+      tri_strip_vertices.set(vertices);
     }
 
     this.context.pixelToGLFloatArray(tri_strip_vertices);
