@@ -73,7 +73,7 @@ const MIN_RES_ANGLE = 0.05; // minimum angle in radians between roundings in a p
 
 // Parameters for the expanding/contracting float array for polyline
 const MIN_SIZE = 16;
-const MAX_SIZE = 2 ** 16;
+const MAX_SIZE = 2 ** 24;
 
 function nextPowerOfTwo(x) {
   return 2 ** Math.ceil(Math.log2(x));
@@ -98,9 +98,11 @@ class PolylinePrimitive extends PrimitiveElement {
     this.join_res = 0.5; // angle in radians between consecutive roundings
 
     this.use_native = false;
+    this.use_cpp = true;
 
     this._gl_triangle_strip_vertices = null;
     this._gl_triangle_strip_vertices_total = 0;
+    this._buffer_too_fat = false;
   }
 
   static ENDCAP_TYPES() {
@@ -183,7 +185,15 @@ class PolylinePrimitive extends PrimitiveElement {
         Module._free(small_buffer);
       }
 
-      if (error) throw error;
+      if (error instanceof RangeError) {
+        // probably means the buffer was too fat
+        this._gl_triangle_strip_vertices_total = 0;
+        this._buffer_too_fat = true;
+      } else if (error) {
+        throw error;
+      }
+
+      this._buffer_too_fat = false;
 
       return;
     }
