@@ -371,8 +371,8 @@ class PolylinePrimitive extends PrimitiveElement {
       tri_strip_vertices = this._gl_triangle_strip_vertices = new_float_array;
     }
 
-    this.context.pixelToGLFloatArray(tri_strip_vertices);
     this._gl_triangle_strip_vertices_total = Math.ceil(gl_tri_strip_i / 2);
+    this.context.pixelToGLFloatArray(tri_strip_vertices, gl_tri_strip_i);
   }
 
   _calculateNativeLines() {

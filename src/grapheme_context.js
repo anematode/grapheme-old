@@ -411,15 +411,38 @@ class GraphemeContext {
     return 2 * y / this.height;
   }
 
-  pixelToGLFloatArray(arr) {
+  pixelToGLFloatArray(arr, compute_first=arr.length) {
     let x_scale = 2 / this.width, y_scale = -2 / this.height;
 
-    for (let i = 0; i < arr.length; i += 2) {
-      arr[i] = arr[i] * x_scale - 1;
-      arr[i+1] = arr[i+1] * y_scale + 1;
+    utils.assert(compute_first <= arr.length);
+
+    if (compute_first < 100 || !(arr instanceof Float32Array)) {
+      for (let i = 0; i < compute_first; i += 2) {
+        arr[i] = arr[i] * x_scale - 1;
+        arr[i+1] = arr[i+1] * y_scale + 1;
+      }
+    } else {
+      let error, buffer;
+
+      try {
+        buffer = Module._malloc(compute_first * Float32Array.BYTES_PER_ELEMENT);
+
+        Module.HEAPF32.set(arr.subarray(0, compute_first), buffer >> 2);
+
+        Module.ccall("pixelToGLFloatArray", null, ["number", "number", "number", "number"], [buffer, compute_first, x_scale, y_scale]);
+
+        arr.set(Module.HEAPF32.subarray(buffer >> 2, (buffer >> 2) + compute_first));
+      } catch(e) {
+        error = e;
+      } finally {
+        Module._free(buffer);
+      }
+
+      if (error) throw error;
     }
 
     return arr;
+
   }
 
   minX() {

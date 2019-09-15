@@ -48,7 +48,7 @@ grapheme_context.container_div.onclick = (evt) => {
 }
 
 let render = function() {
-  // grapheme_context.viewport.height = grapheme_context.viewport.width * grapheme_context.height / grapheme_context.width;
+  grapheme_context.viewport.height = grapheme_context.viewport.width * grapheme_context.height / grapheme_context.width;
 
   grapheme_context.drawFrame();
   polyline.draw();
@@ -58,6 +58,7 @@ let render = function() {
 
 window.onload = render;
 </script>
+
 </body>
 
 </html>
