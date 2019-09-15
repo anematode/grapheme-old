@@ -7,10 +7,13 @@ const vertexShaderSource = `// set the float precision of the shader to medium p
 precision mediump float;
 // a vector containing the 2D position of the vertex
 attribute vec2 v_position;
+uniform vec2 xy_scale;
+
+vec2 displace = vec2(-1, 1);
 
 void main() {
   // set the vertex's resultant position
-  gl_Position = vec4(v_position, 0, 1);
+  gl_Position = vec4(v_position * xy_scale + displace, 0, 1);
 }`;
 
 // this frag shader is used for the polylines
@@ -45,7 +48,7 @@ function getPolylinePrimitiveGLProgram(grapheme) {
   let program = utils.createGLProgram(gl, vertShad, fragShad);
 
   grapheme.gl_infos._polylineShader = {program, colorLoc: gl.getUniformLocation(program, "line_color"),
-vertexLoc: gl.getAttribLocation(program, "v_position")};
+vertexLoc: gl.getAttribLocation(program, "v_position"), xyScale: gl.getUniformLocation(program, "xy_scale")};
 
   return grapheme.gl_infos._polylineShader;
 }
@@ -112,7 +115,7 @@ class PolylinePrimitive extends PrimitiveElement {
     return MIN_RES_ANGLE;
   }
 
-  _calculateTriangles(grapheme_context) {
+  _calculateTriangles(use_cpp=false) {
     // This is nontrivial
 
     // check validity of inputs
@@ -127,6 +130,63 @@ class PolylinePrimitive extends PrimitiveElement {
       return;
     }
 
+    if (use_cpp) {
+      // Information needed: buffer of vertices, length of buffer, type of endcap, type of join, resolution of endcap, resolution of join
+
+      // Steps:
+      // 1. Allocate a buffer on HEAPF32 for the vertices
+      // 2. Copy vertices to the buffer
+      // 3. Call a corresponding polylineCalculateTriangles function
+      // 4. Change tri_strip_vertices length if necessary (to next power of two)
+      // 5. Copy new vertices from buffer to tri_strip_vertices
+      // 6. Free (2)
+
+      let error, big_buffer, small_buffer;
+      let vertices = this.vertices;
+
+      try {
+        big_buffer = Module._malloc(vertices.length * Float32Array.BYTES_PER_ELEMENT);
+
+        let buffer_view = Module.HEAPF32.subarray(big_buffer >> 2, (big_buffer >> 2) + vertices.length);
+
+        if (vertices instanceof Float32Array) {
+          buffer_view.set(vertices);
+        } else {
+          for (let i = 0; i < vertices.length; ++i) {
+            buffer_view[i] = vertices[i];
+          }
+        }
+
+        small_buffer = Module._malloc(2 * Int32Array.BYTES_PER_ELEMENT);
+
+        let small_buffer_view = Module.HEAP32.subarray(small_buffer >> 2, (small_buffer >> 2) + 2);
+
+        Module.ccall("polylineCalculateTriangles", null,
+        ["number", "number", "number", "number", "number", "number", "number", "number"],
+        [big_buffer, vertices.length, small_buffer, this.thickness, this.endcap_type, this.endcap_res, this.join_type, this.join_res]);
+
+        let vector_start = small_buffer_view[0];
+        let vector_len = small_buffer_view[1];
+
+        let vector_buffer = Module.HEAPF32.subarray((vector_start >> 2), (vector_start >> 2) + vector_len);
+
+        if (!this._gl_triangle_strip_vertices || this._gl_triangle_strip_vertices.length < vector_len || this._gl_triangle_strip_vertices.length > vector_len * 2) {
+          this._gl_triangle_strip_vertices = new Float32Array(Math.min(Math.max(MIN_SIZE, nextPowerOfTwo(vector_len)), MAX_SIZE));
+        }
+
+        this._gl_triangle_strip_vertices.set(vector_buffer);
+        this._gl_triangle_strip_vertices_total = vector_len >> 1;
+      } catch (e) {
+        error = e;
+      } finally {
+        Module._free(big_buffer);
+        Module._free(small_buffer);
+      }
+
+      if (error) throw error;
+
+      return;
+    }
 
     let tri_strip_vertices = this._gl_triangle_strip_vertices;
 
@@ -372,7 +432,6 @@ class PolylinePrimitive extends PrimitiveElement {
     }
 
     this._gl_triangle_strip_vertices_total = Math.ceil(gl_tri_strip_i / 2);
-    this.context.pixelToGLFloatArray(tri_strip_vertices, gl_tri_strip_i);
   }
 
   _calculateNativeLines() {
@@ -400,7 +459,6 @@ class PolylinePrimitive extends PrimitiveElement {
       tri_strip_vertices.set(vertices);
     }
 
-    this.context.pixelToGLFloatArray(tri_strip_vertices);
     this._gl_triangle_strip_vertices_total = Math.ceil(vertices.length / 2);
   }
 
@@ -409,7 +467,7 @@ class PolylinePrimitive extends PrimitiveElement {
       recalculate = true;
 
     if (!this.use_native && recalculate) {
-      this._calculateTriangles();
+      this._calculateTriangles(this.use_cpp);
     } else {
       // use native LINE_STRIP for xtreme speed
 
@@ -438,6 +496,10 @@ class PolylinePrimitive extends PrimitiveElement {
       ((color >> 16) & 0xff) / 255, // divided by 255 because webgl likes [0.0, 1.0]
       ((color >> 8) & 0xff) / 255,
       (color & 0xff) / 255);
+
+    gl.uniform2f(gl_info.xyScale,
+      2 / this.context.width,
+      -2 / this.context.height);
 
     // copy our vertex data to the GPU
     gl.bufferData(gl.ARRAY_BUFFER, this._gl_triangle_strip_vertices, gl.DYNAMIC_DRAW /* means we will rewrite the data often */);
