@@ -275,13 +275,35 @@ var Grapheme = (function (exports) {
       this.elements = [];
 
       // x is of the center, y is of the center, width is the total width, height is the total height
+      // Cartesian coordinates
       this.viewport = {x: 0, y: 0, width: 1, height: 1};
+      this._margins = {top: 40, left: 40, bottom: 40, right: 40}; // pixels
 
       // 0 <= r,g,b <= 255, 0 <= a <= 1 please!
       this.clear_color = {r: 255, g: 255, b: 255, a: 0.95};
       this.gl_infos = {};
 
       this._addResizeEventListeners();
+    }
+
+    get margin_top() {
+      return this._margins.top;
+    }
+
+    set margin_top(val) {
+      assert(val >= 0, "Margin must be nonnegative");
+
+      this._margins.top = val;
+    }
+
+    get margin_bottom() {
+      return this._margins.bottom;
+    }
+
+    set margin_bottom(val) {
+      assert(val >= 0, "Margin must be nonnegative");
+
+      this._margins.bottom = val;
     }
 
     drawFrame() {
